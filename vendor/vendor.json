@@ -1,0 +1,138 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "Ohzmn3hdzuDAONRJ4pfj9gIcK9Y=",
+			"path": "github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/resources/mgmt/resources",
+			"revision": "da91af54816b4cf72949c225a2d0980f51fab01b",
+			"revisionTime": "2018-10-19T17:11:53Z",
+			"version": "v21.3.0",
+			"versionExact": "v21.3.0"
+		},
+		{
+			"checksumSHA1": "dVI8mXjcACkxDIMil3qe9FXxfo8=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-02-01/resources",
+			"revision": "da91af54816b4cf72949c225a2d0980f51fab01b",
+			"revisionTime": "2018-10-19T17:11:53Z",
+			"version": "v21.3.0",
+			"versionExact": "v21.3.0"
+		},
+		{
+			"checksumSHA1": "1Y2+bSzYrdPHQqRjR1OrBMHAvxY=",
+			"path": "github.com/Azure/go-autorest/autorest",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "GxL0HHpZDj2milPhR3SPV6MWLPc=",
+			"path": "github.com/Azure/go-autorest/autorest/adal",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "iabndyKiv9sLDixJh4izKt7Nniw=",
+			"path": "github.com/Azure/go-autorest/autorest/azure",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "Fkezj7ch01wYNvXzQZdhmeSf/mk=",
+			"path": "github.com/Azure/go-autorest/autorest/azure/cli",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "9nXCi9qQsYjxCeajJKWttxgEt0I=",
+			"path": "github.com/Azure/go-autorest/autorest/date",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "SbBb2GcJNm5GjuPKGL2777QywR4=",
+			"path": "github.com/Azure/go-autorest/autorest/to",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "HjdLfAF3oA2In8F3FKh/Y+BPyXk=",
+			"path": "github.com/Azure/go-autorest/autorest/validation",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "b2lrPJRxf+MEfmMafN40wepi5WM=",
+			"path": "github.com/Azure/go-autorest/logger",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "JVAdK/V4SFCsCdpRBd4hTq/Z3h4=",
+			"path": "github.com/Azure/go-autorest/version",
+			"revision": "a88c19ef2016e095f0b6c3b451074b4663f53bed",
+			"revisionTime": "2018-09-11T16:08:53Z",
+			"version": "v10.15.4",
+			"versionExact": "v10.15.4"
+		},
+		{
+			"checksumSHA1": "L7NqEfBxi5sjuvjE8hnDimfGemA=",
+			"path": "github.com/dimchansky/utfbom",
+			"revision": "d2133a1ce379ef6fa992b0514a77146c60db9d1c",
+			"revisionTime": "2018-12-05T23:29:56Z"
+		},
+		{
+			"checksumSHA1": "ByRdQMv2yl16W6Tp9gUW1nNmpuI=",
+			"path": "github.com/hashicorp/errwrap",
+			"revision": "8a6fb523712970c966eefc6b39ed2c5e74880354",
+			"revisionTime": "2018-08-24T00:39:10Z"
+		},
+		{
+			"checksumSHA1": "xXXC4VU7wckbYUkhk578k0Dxbuc=",
+			"path": "github.com/hashicorp/go-azure-helpers/authentication",
+			"revision": "df9554e6b1e9f15193593fae2fff690f7f520220",
+			"revisionTime": "2018-12-11T09:40:55Z",
+			"version": "0.3.0",
+			"versionExact": "0.3.0"
+		},
+		{
+			"checksumSHA1": "cFcwn0Zxefithm9Q9DioRNcGbqg=",
+			"path": "github.com/hashicorp/go-multierror",
+			"revision": "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",
+			"revisionTime": "2018-08-24T00:40:42Z"
+		},
+		{
+			"checksumSHA1": "a58zUNtDH/gEd6F6KI3FqT2iEo0=",
+			"path": "github.com/mitchellh/go-homedir",
+			"revision": "ae18d6b8b3205b561c79e8e5f69bff09736185f4",
+			"revisionTime": "2018-08-24T00:42:36Z"
+		},
+		{
+			"checksumSHA1": "PJY7uCr3UnX4/Mf/RoWnbieSZ8o=",
+			"path": "golang.org/x/crypto/pkcs12",
+			"revision": "505ab145d0a99da450461ae2c1a9f6cd10d1f447",
+			"revisionTime": "2018-09-26T22:07:39Z"
+		},
+		{
+			"checksumSHA1": "p0GC51McIdA7JygoP223twJ1s0E=",
+			"path": "golang.org/x/crypto/pkcs12/internal/rc2",
+			"revision": "505ab145d0a99da450461ae2c1a9f6cd10d1f447",
+			"revisionTime": "2018-09-26T22:07:39Z"
+		}
+	],
+	"rootPath": "github.com/tombuildsstuff/azurerm-dalek"
+}
