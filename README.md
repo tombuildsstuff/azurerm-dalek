@@ -12,7 +12,7 @@ The Dalek supports using both a Service Principal and your Azure CLI credentials
 * `ARM_SUBSCRIPTION_ID` - The ID of the Azure Subscription within the Tenant
 * `ARM_TENANT_ID` - The ID of the Azure Tenant
 * `ARM_ENDPOINT` - (Optional) The URI of a Custom Resource Manager Endpoint, intended for use with Azure Stack.
-* `YES_I_REALLY_WANT_TO_DELETE_THINGS` - (Optional) Set this to any value to actually delete resources
+* `YES_I_REALLY_WANT_TO_DELETE_THINGS` - (Optional) Set this to `true` to actually delete resources
 
 ## Dependencies
 

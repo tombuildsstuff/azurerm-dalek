@@ -21,7 +21,7 @@ func main() {
 
 	ctx := context.TODO()
 	numberOfResourceGroupsToDelete := 1000
-	actuallyDelete := os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS") != ""
+	actuallyDelete := strings.EqualFold(os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS"), "true")
 
 	log.Printf("[DEBUG] Preparing to delete Resource Groups..")
 	err = client.deleteResourceGroups(ctx, numberOfResourceGroupsToDelete, actuallyDelete)
