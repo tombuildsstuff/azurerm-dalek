@@ -15,7 +15,7 @@ func main() {
 
 	client, err := buildArmClient()
 	if err != nil {
-		log.Printf("[ERROR] Unable to create Resource Groups Client: %+v", err)
+		panic(fmt.Errorf("[ERROR] Unable to create Resource Groups Client: %+v", err))
 		return
 	}
 
