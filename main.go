@@ -60,7 +60,8 @@ func (c ArmClient) deleteResourceGroups(ctx context.Context, numberOfResourceGro
 		log.Printf("[DEBUG]   Deleting Resource Group %q..", groupName)
 		_, err := c.resourcesClient.Delete(ctx, groupName)
 		if err != nil {
-			return fmt.Errorf("Error deleting Resource Group %q: %+v", groupName, err)
+			log.Printf("[DEBUG]   Error during deletion of Resource Group %q: %s", groupName, err)
+			continue
 		}
 		log.Printf("[DEBUG]   Deletion triggered for Resource Group %q", groupName)
 	}
