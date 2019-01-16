@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -19,18 +20,24 @@ func main() {
 		return
 	}
 
+	prefix := flag.String("prefix", "", "-prefix=acctest")
+
+	flag.Parse()
+
+	log.Printf("[DEBUG] Required Prefix Match is %q", *prefix)
+
 	ctx := context.TODO()
 	numberOfResourceGroupsToDelete := 1000
 	actuallyDelete := strings.EqualFold(os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS"), "true")
 
-	log.Printf("[DEBUG] Preparing to delete Resource Groups..")
-	err = client.deleteResourceGroups(ctx, numberOfResourceGroupsToDelete, actuallyDelete)
+	log.Printf("[DEBUG] Preparing to delete Resource Groups (actually delete: %t)..", actuallyDelete)
+	err = client.deleteResourceGroups(ctx, numberOfResourceGroupsToDelete, *prefix, actuallyDelete)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (c ArmClient) deleteResourceGroups(ctx context.Context, numberOfResourceGroupsToDelete int, actuallyDelete bool) error {
+func (c ArmClient) deleteResourceGroups(ctx context.Context, numberOfResourceGroupsToDelete int, prefix string, actuallyDelete bool) error {
 	max := int32(numberOfResourceGroupsToDelete)
 	log.Printf("[DEBUG] Loading the first %d resource groups to delete", numberOfResourceGroupsToDelete)
 	groups, err := c.resourcesClient.List(ctx, "", &max)
@@ -47,8 +54,8 @@ func (c ArmClient) deleteResourceGroups(ctx context.Context, numberOfResourceGro
 			continue
 		}
 
-		if !shouldDeleteResourceGroup(resource) {
-			log.Println("[DEBUG]   Not a Test Resource Group - Skipping..")
+		if !shouldDeleteResourceGroup(resource, prefix) {
+			log.Println("[DEBUG]   Shouldn't Delete - Skipping..")
 			continue
 		}
 
@@ -69,7 +76,13 @@ func (c ArmClient) deleteResourceGroups(ctx context.Context, numberOfResourceGro
 	return nil
 }
 
-func shouldDeleteResourceGroup(input resources.Group) bool {
+func shouldDeleteResourceGroup(input resources.Group, prefix string) bool {
+	if prefix != "" {
+		if !strings.HasPrefix(strings.ToLower(*input.Name), strings.ToLower(prefix)) {
+			return false
+		}
+	}
+
 	for k, _ := range input.Tags {
 		if strings.EqualFold(k, "donotdelete") {
 			return false

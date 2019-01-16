@@ -14,6 +14,10 @@ The Dalek supports using both a Service Principal and your Azure CLI credentials
 * `ARM_ENDPOINT` - (Optional) The URI of a Custom Resource Manager Endpoint, intended for use with Azure Stack.
 * `YES_I_REALLY_WANT_TO_DELETE_THINGS` - (Optional) Set this to `true` to actually delete resources
 
+It's also possible to use the following command line flags:
+
+* `prefix` - (Optional) An optional prefix for Resource Group names. 
+
 ## Dependencies
 
 * Go 1.11
