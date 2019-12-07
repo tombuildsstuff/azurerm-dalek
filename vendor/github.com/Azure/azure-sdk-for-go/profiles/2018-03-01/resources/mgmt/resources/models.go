@@ -22,7 +22,7 @@ package resources
 import (
 	"context"
 
-	original "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-02-01/resources"
+	original "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 )
 
 const (
@@ -36,10 +36,20 @@ const (
 	Incremental DeploymentMode = original.Incremental
 )
 
+type OnErrorDeploymentType = original.OnErrorDeploymentType
+
+const (
+	LastSuccessful     OnErrorDeploymentType = original.LastSuccessful
+	SpecificDeployment OnErrorDeploymentType = original.SpecificDeployment
+)
+
 type ResourceIdentityType = original.ResourceIdentityType
 
 const (
-	SystemAssigned ResourceIdentityType = original.SystemAssigned
+	None                       ResourceIdentityType = original.None
+	SystemAssigned             ResourceIdentityType = original.SystemAssigned
+	SystemAssignedUserAssigned ResourceIdentityType = original.SystemAssignedUserAssigned
+	UserAssigned               ResourceIdentityType = original.UserAssigned
 )
 
 type AliasPathType = original.AliasPathType
@@ -48,7 +58,11 @@ type BaseClient = original.BaseClient
 type BasicDependency = original.BasicDependency
 type Client = original.Client
 type CloudError = original.CloudError
+type CreateOrUpdateByIDFuture = original.CreateOrUpdateByIDFuture
+type CreateOrUpdateFuture = original.CreateOrUpdateFuture
 type DebugSetting = original.DebugSetting
+type DeleteByIDFuture = original.DeleteByIDFuture
+type DeleteFuture = original.DeleteFuture
 type Dependency = original.Dependency
 type Deployment = original.Deployment
 type DeploymentExportResult = original.DeploymentExportResult
@@ -80,6 +94,7 @@ type GroupFilter = original.GroupFilter
 type GroupListResult = original.GroupListResult
 type GroupListResultIterator = original.GroupListResultIterator
 type GroupListResultPage = original.GroupListResultPage
+type GroupPatchable = original.GroupPatchable
 type GroupProperties = original.GroupProperties
 type GroupsClient = original.GroupsClient
 type GroupsDeleteFuture = original.GroupsDeleteFuture
@@ -91,6 +106,8 @@ type ListResultPage = original.ListResultPage
 type ManagementErrorWithDetails = original.ManagementErrorWithDetails
 type MoveInfo = original.MoveInfo
 type MoveResourcesFuture = original.MoveResourcesFuture
+type OnErrorDeployment = original.OnErrorDeployment
+type OnErrorDeploymentExtended = original.OnErrorDeploymentExtended
 type ParametersLink = original.ParametersLink
 type Plan = original.Plan
 type Provider = original.Provider
@@ -113,7 +130,9 @@ type TagsListResultPage = original.TagsListResultPage
 type TargetResource = original.TargetResource
 type TemplateHashResult = original.TemplateHashResult
 type TemplateLink = original.TemplateLink
+type UpdateByIDFuture = original.UpdateByIDFuture
 type UpdateFuture = original.UpdateFuture
+type ValidateMoveResourcesFuture = original.ValidateMoveResourcesFuture
 
 func New(subscriptionID string) BaseClient {
 	return original.New(subscriptionID)
@@ -196,11 +215,14 @@ func NewWithBaseURI(baseURI string, subscriptionID string) BaseClient {
 func PossibleDeploymentModeValues() []DeploymentMode {
 	return original.PossibleDeploymentModeValues()
 }
+func PossibleOnErrorDeploymentTypeValues() []OnErrorDeploymentType {
+	return original.PossibleOnErrorDeploymentTypeValues()
+}
 func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
 	return original.PossibleResourceIdentityTypeValues()
 }
 func UserAgent() string {
-	return original.UserAgent() + " profiles/2017-03-09"
+	return original.UserAgent() + " profiles/2018-03-01"
 }
 func Version() string {
 	return original.Version()

@@ -5,7 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/resources/mgmt/resources"
+	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/locks"
+	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/go-azure-helpers/authentication"
 	`github.com/hashicorp/go-azure-helpers/sender`
@@ -13,6 +14,7 @@ import (
 
 type ArmClient struct {
 	resourcesClient *resources.GroupsClient
+	locksClient     *locks.ManagementLocksClient
 }
 
 func buildArmClient() (*ArmClient, error) {
@@ -73,8 +75,12 @@ func buildArmClient() (*ArmClient, error) {
 	resourcesClient := resources.NewGroupsClientWithBaseURI(endpoint, client.SubscriptionID)
 	resourcesClient.Authorizer = auth
 
+	locksClient := locks.NewManagementLocksClientWithBaseURI(endpoint, client.SubscriptionID)
+	locksClient.Authorizer = auth
+
 	armClient := ArmClient{
 		resourcesClient: &resourcesClient,
+		locksClient:     &locksClient,
 	}
 
 	return &armClient, nil

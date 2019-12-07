@@ -26,7 +26,7 @@ import (
 	"net/http"
 )
 
-// DeploymentsClient is the client for the Deployments methods of the Resources service.
+// DeploymentsClient is the provides operations for working with resources and resource groups.
 type DeploymentsClient struct {
 	BaseClient
 }
@@ -78,7 +78,7 @@ func (client DeploymentsClient) CalculateTemplateHash(ctx context.Context, templ
 
 // CalculateTemplateHashPreparer prepares the CalculateTemplateHash request.
 func (client DeploymentsClient) CalculateTemplateHashPreparer(ctx context.Context, templateParameter interface{}) (*http.Request, error) {
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -113,10 +113,12 @@ func (client DeploymentsClient) CalculateTemplateHashResponder(resp *http.Respon
 	return
 }
 
-// Cancel cancel a currently running template deployment.
+// Cancel you can cancel a deployment only if the provisioningState is Accepted or Running. After the deployment is
+// canceled, the provisioningState is set to Canceled. Canceling a template deployment stops the currently running
+// template deployment and leaves the resource group partially deployed.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
-// deploymentName - the name of the deployment.
+// deploymentName - the name of the deployment to cancel.
 func (client DeploymentsClient) Cancel(ctx context.Context, resourceGroupName string, deploymentName string) (result autorest.Response, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.Cancel")
@@ -132,7 +134,11 @@ func (client DeploymentsClient) Cancel(ctx context.Context, resourceGroupName st
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("resources.DeploymentsClient", "Cancel", err.Error())
 	}
 
@@ -165,7 +171,7 @@ func (client DeploymentsClient) CancelPreparer(ctx context.Context, resourceGrou
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -197,10 +203,11 @@ func (client DeploymentsClient) CancelResponder(resp *http.Response) (result aut
 	return
 }
 
-// CheckExistence checks whether deployment exists.
+// CheckExistence checks whether the deployment exists.
 // Parameters:
-// resourceGroupName - the name of the resource group to check. The name is case insensitive.
-// deploymentName - the name of the deployment.
+// resourceGroupName - the name of the resource group with the deployment to check. The name is case
+// insensitive.
+// deploymentName - the name of the deployment to check.
 func (client DeploymentsClient) CheckExistence(ctx context.Context, resourceGroupName string, deploymentName string) (result autorest.Response, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.CheckExistence")
@@ -216,7 +223,11 @@ func (client DeploymentsClient) CheckExistence(ctx context.Context, resourceGrou
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("resources.DeploymentsClient", "CheckExistence", err.Error())
 	}
 
@@ -249,7 +260,7 @@ func (client DeploymentsClient) CheckExistencePreparer(ctx context.Context, reso
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -281,9 +292,10 @@ func (client DeploymentsClient) CheckExistenceResponder(resp *http.Response) (re
 	return
 }
 
-// CreateOrUpdate create a named template deployment using a template.
+// CreateOrUpdate you can provide the template and parameters directly in the request or link to JSON files.
 // Parameters:
-// resourceGroupName - the name of the resource group. The name is case insensitive.
+// resourceGroupName - the name of the resource group to deploy the resources to. The name is case insensitive.
+// The resource group must already exist.
 // deploymentName - the name of the deployment.
 // parameters - additional parameters supplied to the operation.
 func (client DeploymentsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, deploymentName string, parameters Deployment) (result DeploymentsCreateOrUpdateFuture, err error) {
@@ -302,8 +314,12 @@ func (client DeploymentsClient) CreateOrUpdate(ctx context.Context, resourceGrou
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
 		{TargetValue: parameters,
-			Constraints: []validation.Constraint{{Target: "parameters.Properties", Name: validation.Null, Rule: false,
+			Constraints: []validation.Constraint{{Target: "parameters.Properties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "parameters.Properties.TemplateLink", Name: validation.Null, Rule: false,
 					Chain: []validation.Constraint{{Target: "parameters.Properties.TemplateLink.URI", Name: validation.Null, Rule: true, Chain: nil}}},
 					{Target: "parameters.Properties.ParametersLink", Name: validation.Null, Rule: false,
@@ -335,7 +351,7 @@ func (client DeploymentsClient) CreateOrUpdatePreparer(ctx context.Context, reso
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -376,10 +392,17 @@ func (client DeploymentsClient) CreateOrUpdateResponder(resp *http.Response) (re
 	return
 }
 
-// Delete delete deployment.
+// Delete a template deployment that is currently running cannot be deleted. Deleting a template deployment removes the
+// associated deployment operations. Deleting a template deployment does not affect the state of the resource group.
+// This is an asynchronous operation that returns a status of 202 until the template deployment is successfully
+// deleted. The Location response header contains the URI that is used to obtain the status of the process. While the
+// process is running, a call to the URI in the Location header returns a status of 202. When the process finishes, the
+// URI in the Location header returns a status of 204 on success. If the asynchronous request failed, the URI in the
+// Location header returns an error-level status code.
 // Parameters:
-// resourceGroupName - the name of the resource group. The name is case insensitive.
-// deploymentName - the name of the deployment to be deleted.
+// resourceGroupName - the name of the resource group with the deployment to delete. The name is case
+// insensitive.
+// deploymentName - the name of the deployment to delete.
 func (client DeploymentsClient) Delete(ctx context.Context, resourceGroupName string, deploymentName string) (result DeploymentsDeleteFuture, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.Delete")
@@ -395,7 +418,11 @@ func (client DeploymentsClient) Delete(ctx context.Context, resourceGroupName st
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("resources.DeploymentsClient", "Delete", err.Error())
 	}
 
@@ -422,7 +449,7 @@ func (client DeploymentsClient) DeletePreparer(ctx context.Context, resourceGrou
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -460,10 +487,10 @@ func (client DeploymentsClient) DeleteResponder(resp *http.Response) (result aut
 	return
 }
 
-// ExportTemplate exports a deployment template.
+// ExportTemplate exports the template used for specified deployment.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
-// deploymentName - the name of the deployment.
+// deploymentName - the name of the deployment from which to get the template.
 func (client DeploymentsClient) ExportTemplate(ctx context.Context, resourceGroupName string, deploymentName string) (result DeploymentExportResult, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.ExportTemplate")
@@ -479,7 +506,11 @@ func (client DeploymentsClient) ExportTemplate(ctx context.Context, resourceGrou
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("resources.DeploymentsClient", "ExportTemplate", err.Error())
 	}
 
@@ -512,7 +543,7 @@ func (client DeploymentsClient) ExportTemplatePreparer(ctx context.Context, reso
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -545,10 +576,10 @@ func (client DeploymentsClient) ExportTemplateResponder(resp *http.Response) (re
 	return
 }
 
-// Get get a deployment.
+// Get gets a deployment.
 // Parameters:
-// resourceGroupName - the name of the resource group to get. The name is case insensitive.
-// deploymentName - the name of the deployment.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// deploymentName - the name of the deployment to get.
 func (client DeploymentsClient) Get(ctx context.Context, resourceGroupName string, deploymentName string) (result DeploymentExtended, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.Get")
@@ -564,7 +595,11 @@ func (client DeploymentsClient) Get(ctx context.Context, resourceGroupName strin
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("resources.DeploymentsClient", "Get", err.Error())
 	}
 
@@ -597,7 +632,7 @@ func (client DeploymentsClient) GetPreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -630,14 +665,16 @@ func (client DeploymentsClient) GetResponder(resp *http.Response) (result Deploy
 	return
 }
 
-// List get a list of deployments.
+// ListByResourceGroup get all the deployments for a resource group.
 // Parameters:
-// resourceGroupName - the name of the resource group to filter by. The name is case insensitive.
-// filter - the filter to apply on the operation.
-// top - query parameters. If null is passed returns all deployments.
-func (client DeploymentsClient) List(ctx context.Context, resourceGroupName string, filter string, top *int32) (result DeploymentListResultPage, err error) {
+// resourceGroupName - the name of the resource group with the deployments to get. The name is case
+// insensitive.
+// filter - the filter to apply on the operation. For example, you can use $filter=provisioningState eq
+// '{state}'.
+// top - the number of results to get. If null is passed, returns all deployments.
+func (client DeploymentsClient) ListByResourceGroup(ctx context.Context, resourceGroupName string, filter string, top *int32) (result DeploymentListResultPage, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.ListByResourceGroup")
 		defer func() {
 			sc := -1
 			if result.dlr.Response.Response != nil {
@@ -651,39 +688,39 @@ func (client DeploymentsClient) List(ctx context.Context, resourceGroupName stri
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("resources.DeploymentsClient", "List", err.Error())
+		return result, validation.NewError("resources.DeploymentsClient", "ListByResourceGroup", err.Error())
 	}
 
-	result.fn = client.listNextResults
-	req, err := client.ListPreparer(ctx, resourceGroupName, filter, top)
+	result.fn = client.listByResourceGroupNextResults
+	req, err := client.ListByResourceGroupPreparer(ctx, resourceGroupName, filter, top)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "List", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "ListByResourceGroup", nil, "Failure preparing request")
 		return
 	}
 
-	resp, err := client.ListSender(req)
+	resp, err := client.ListByResourceGroupSender(req)
 	if err != nil {
 		result.dlr.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "List", resp, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "ListByResourceGroup", resp, "Failure sending request")
 		return
 	}
 
-	result.dlr, err = client.ListResponder(resp)
+	result.dlr, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "List", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "ListByResourceGroup", resp, "Failure responding to request")
 	}
 
 	return
 }
 
-// ListPreparer prepares the List request.
-func (client DeploymentsClient) ListPreparer(ctx context.Context, resourceGroupName string, filter string, top *int32) (*http.Request, error) {
+// ListByResourceGroupPreparer prepares the ListByResourceGroup request.
+func (client DeploymentsClient) ListByResourceGroupPreparer(ctx context.Context, resourceGroupName string, filter string, top *int32) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -702,16 +739,16 @@ func (client DeploymentsClient) ListPreparer(ctx context.Context, resourceGroupN
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
-// ListSender sends the List request. The method will close the
+// ListByResourceGroupSender sends the ListByResourceGroup request. The method will close the
 // http.Response Body if it receives an error.
-func (client DeploymentsClient) ListSender(req *http.Request) (*http.Response, error) {
+func (client DeploymentsClient) ListByResourceGroupSender(req *http.Request) (*http.Response, error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	return autorest.SendWithSender(client, req, sd...)
 }
 
-// ListResponder handles the response to the List request. The method always
+// ListByResourceGroupResponder handles the response to the ListByResourceGroup request. The method always
 // closes the http.Response Body.
-func (client DeploymentsClient) ListResponder(resp *http.Response) (result DeploymentListResult, err error) {
+func (client DeploymentsClient) ListByResourceGroupResponder(resp *http.Response) (result DeploymentListResult, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -722,31 +759,31 @@ func (client DeploymentsClient) ListResponder(resp *http.Response) (result Deplo
 	return
 }
 
-// listNextResults retrieves the next set of results, if any.
-func (client DeploymentsClient) listNextResults(ctx context.Context, lastResults DeploymentListResult) (result DeploymentListResult, err error) {
+// listByResourceGroupNextResults retrieves the next set of results, if any.
+func (client DeploymentsClient) listByResourceGroupNextResults(ctx context.Context, lastResults DeploymentListResult) (result DeploymentListResult, err error) {
 	req, err := lastResults.deploymentListResultPreparer(ctx)
 	if err != nil {
-		return result, autorest.NewErrorWithError(err, "resources.DeploymentsClient", "listNextResults", nil, "Failure preparing next results request")
+		return result, autorest.NewErrorWithError(err, "resources.DeploymentsClient", "listByResourceGroupNextResults", nil, "Failure preparing next results request")
 	}
 	if req == nil {
 		return
 	}
-	resp, err := client.ListSender(req)
+	resp, err := client.ListByResourceGroupSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		return result, autorest.NewErrorWithError(err, "resources.DeploymentsClient", "listNextResults", resp, "Failure sending next results request")
+		return result, autorest.NewErrorWithError(err, "resources.DeploymentsClient", "listByResourceGroupNextResults", resp, "Failure sending next results request")
 	}
-	result, err = client.ListResponder(resp)
+	result, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "listNextResults", resp, "Failure responding to next results request")
+		err = autorest.NewErrorWithError(err, "resources.DeploymentsClient", "listByResourceGroupNextResults", resp, "Failure responding to next results request")
 	}
 	return
 }
 
-// ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client DeploymentsClient) ListComplete(ctx context.Context, resourceGroupName string, filter string, top *int32) (result DeploymentListResultIterator, err error) {
+// ListByResourceGroupComplete enumerates all values, automatically crossing page boundaries as required.
+func (client DeploymentsClient) ListByResourceGroupComplete(ctx context.Context, resourceGroupName string, filter string, top *int32) (result DeploymentListResultIterator, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.ListByResourceGroup")
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
@@ -755,15 +792,17 @@ func (client DeploymentsClient) ListComplete(ctx context.Context, resourceGroupN
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	result.page, err = client.List(ctx, resourceGroupName, filter, top)
+	result.page, err = client.ListByResourceGroup(ctx, resourceGroupName, filter, top)
 	return
 }
 
-// Validate validate a deployment template.
+// Validate validates whether the specified template is syntactically correct and will be accepted by Azure Resource
+// Manager..
 // Parameters:
-// resourceGroupName - the name of the resource group. The name is case insensitive.
+// resourceGroupName - the name of the resource group the template will be deployed to. The name is case
+// insensitive.
 // deploymentName - the name of the deployment.
-// parameters - deployment to validate.
+// parameters - parameters to validate.
 func (client DeploymentsClient) Validate(ctx context.Context, resourceGroupName string, deploymentName string, parameters Deployment) (result DeploymentValidateResult, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentsClient.Validate")
@@ -780,8 +819,12 @@ func (client DeploymentsClient) Validate(ctx context.Context, resourceGroupName 
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
 		{TargetValue: parameters,
-			Constraints: []validation.Constraint{{Target: "parameters.Properties", Name: validation.Null, Rule: false,
+			Constraints: []validation.Constraint{{Target: "parameters.Properties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "parameters.Properties.TemplateLink", Name: validation.Null, Rule: false,
 					Chain: []validation.Constraint{{Target: "parameters.Properties.TemplateLink.URI", Name: validation.Null, Rule: true, Chain: nil}}},
 					{Target: "parameters.Properties.ParametersLink", Name: validation.Null, Rule: false,
@@ -819,7 +862,7 @@ func (client DeploymentsClient) ValidatePreparer(ctx context.Context, resourceGr
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

@@ -26,7 +26,7 @@ import (
 	"net/http"
 )
 
-// DeploymentOperationsClient is the client for the DeploymentOperations methods of the Resources service.
+// DeploymentOperationsClient is the provides operations for working with resources and resource groups.
 type DeploymentOperationsClient struct {
 	BaseClient
 }
@@ -41,11 +41,11 @@ func NewDeploymentOperationsClientWithBaseURI(baseURI string, subscriptionID str
 	return DeploymentOperationsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// Get get a list of deployments operations.
+// Get gets a deployments operation.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // deploymentName - the name of the deployment.
-// operationID - operation Id.
+// operationID - the ID of the operation to get.
 func (client DeploymentOperationsClient) Get(ctx context.Context, resourceGroupName string, deploymentName string, operationID string) (result DeploymentOperation, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentOperationsClient.Get")
@@ -61,7 +61,11 @@ func (client DeploymentOperationsClient) Get(ctx context.Context, resourceGroupN
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("resources.DeploymentOperationsClient", "Get", err.Error())
 	}
 
@@ -95,7 +99,7 @@ func (client DeploymentOperationsClient) GetPreparer(ctx context.Context, resour
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -128,11 +132,11 @@ func (client DeploymentOperationsClient) GetResponder(resp *http.Response) (resu
 	return
 }
 
-// List gets a list of deployments operations.
+// List gets all deployments operations for a deployment.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
-// deploymentName - the name of the deployment.
-// top - query parameters.
+// deploymentName - the name of the deployment with the operation to get.
+// top - the number of results to return.
 func (client DeploymentOperationsClient) List(ctx context.Context, resourceGroupName string, deploymentName string, top *int32) (result DeploymentOperationsListResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DeploymentOperationsClient.List")
@@ -148,7 +152,11 @@ func (client DeploymentOperationsClient) List(ctx context.Context, resourceGroup
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
 				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\p{L}\._\(\)\w]+$`, Chain: nil}}},
+		{TargetValue: deploymentName,
+			Constraints: []validation.Constraint{{Target: "deploymentName", Name: validation.MaxLength, Rule: 64, Chain: nil},
+				{Target: "deploymentName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "deploymentName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("resources.DeploymentOperationsClient", "List", err.Error())
 	}
 
@@ -182,7 +190,7 @@ func (client DeploymentOperationsClient) ListPreparer(ctx context.Context, resou
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

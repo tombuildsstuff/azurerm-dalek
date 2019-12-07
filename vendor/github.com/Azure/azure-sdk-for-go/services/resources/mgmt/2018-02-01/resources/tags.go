@@ -25,7 +25,7 @@ import (
 	"net/http"
 )
 
-// TagsClient is the client for the Tags methods of the Resources service.
+// TagsClient is the provides operations for working with resources and resource groups.
 type TagsClient struct {
 	BaseClient
 }
@@ -40,9 +40,10 @@ func NewTagsClientWithBaseURI(baseURI string, subscriptionID string) TagsClient 
 	return TagsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// CreateOrUpdate create a subscription resource tag.
+// CreateOrUpdate the tag name can have a maximum of 512 characters and is case insensitive. Tag names created by Azure
+// have prefixes of microsoft, azure, or windows. You cannot create tags with one of these prefixes.
 // Parameters:
-// tagName - the name of the tag.
+// tagName - the name of the tag to create.
 func (client TagsClient) CreateOrUpdate(ctx context.Context, tagName string) (result TagDetails, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/TagsClient.CreateOrUpdate")
@@ -82,7 +83,7 @@ func (client TagsClient) CreateOrUpdatePreparer(ctx context.Context, tagName str
 		"tagName":        autorest.Encode("path", tagName),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -115,10 +116,10 @@ func (client TagsClient) CreateOrUpdateResponder(resp *http.Response) (result Ta
 	return
 }
 
-// CreateOrUpdateValue create a subscription resource tag value.
+// CreateOrUpdateValue creates a tag value. The name of the tag must already exist.
 // Parameters:
 // tagName - the name of the tag.
-// tagValue - the value of the tag.
+// tagValue - the value of the tag to create.
 func (client TagsClient) CreateOrUpdateValue(ctx context.Context, tagName string, tagValue string) (result TagValue, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/TagsClient.CreateOrUpdateValue")
@@ -159,7 +160,7 @@ func (client TagsClient) CreateOrUpdateValuePreparer(ctx context.Context, tagNam
 		"tagValue":       autorest.Encode("path", tagValue),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -192,7 +193,7 @@ func (client TagsClient) CreateOrUpdateValueResponder(resp *http.Response) (resu
 	return
 }
 
-// Delete delete a subscription resource tag.
+// Delete you must remove all values from a resource tag before you can delete it.
 // Parameters:
 // tagName - the name of the tag.
 func (client TagsClient) Delete(ctx context.Context, tagName string) (result autorest.Response, err error) {
@@ -234,7 +235,7 @@ func (client TagsClient) DeletePreparer(ctx context.Context, tagName string) (*h
 		"tagName":        autorest.Encode("path", tagName),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -266,10 +267,10 @@ func (client TagsClient) DeleteResponder(resp *http.Response) (result autorest.R
 	return
 }
 
-// DeleteValue delete a subscription resource tag value.
+// DeleteValue deletes a tag value.
 // Parameters:
 // tagName - the name of the tag.
-// tagValue - the value of the tag.
+// tagValue - the value of the tag to delete.
 func (client TagsClient) DeleteValue(ctx context.Context, tagName string, tagValue string) (result autorest.Response, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/TagsClient.DeleteValue")
@@ -310,7 +311,7 @@ func (client TagsClient) DeleteValuePreparer(ctx context.Context, tagName string
 		"tagValue":       autorest.Encode("path", tagValue),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -342,7 +343,7 @@ func (client TagsClient) DeleteValueResponder(resp *http.Response) (result autor
 	return
 }
 
-// List get a list of subscription resource tags.
+// List gets the names and values of all resource tags that are defined in a subscription.
 func (client TagsClient) List(ctx context.Context) (result TagsListResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/TagsClient.List")
@@ -382,7 +383,7 @@ func (client TagsClient) ListPreparer(ctx context.Context) (*http.Request, error
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-02-01"
+	const APIVersion = "2018-02-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

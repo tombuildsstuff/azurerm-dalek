@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/resources/mgmt/resources"
+	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
 )
 
 func main() {
@@ -64,6 +64,36 @@ func (c ArmClient) deleteResourceGroups(ctx context.Context, numberOfResourceGro
 			continue
 		}
 
+		locks, lerr := c.locksClient.ListAtResourceGroupLevel(ctx, groupName, "")
+		if lerr != nil {
+			log.Printf("[DEBUG] Error obtaining Resource Group Locks : %+v", err)
+		} else {
+			for _, lock := range locks.Values() {
+				if lock.ID == nil {
+					log.Printf("[DEBUG]   Lock with nil id on %q", groupName)
+					continue
+				}
+				id := *lock.ID
+
+				if lock.Name == nil {
+					log.Printf("[DEBUG]   Lock %s with nil name on %q", id, groupName)
+					continue
+				}
+
+				log.Printf("[DEBUG]   Atemping to remove lock %s from : %s", id, groupName)
+				parts := strings.Split(id, "/providers/Microsoft.Authorization/locks/")
+				if len(parts) != 2 {
+					log.Printf("[DEBUG]   Error splitting %s on /providers/Microsoft.Authorization/locks/", id)
+				}
+				scope := parts[0]
+				name := parts[1]
+
+				if _, lerr = c.locksClient.DeleteByScope(ctx, scope, name); lerr != nil {
+					log.Printf("[DEBUG]   Unable to delete lock %s on resource group %q", *lock.Name, groupName)
+				}
+			}
+		}
+
 		log.Printf("[DEBUG]   Deleting Resource Group %q..", groupName)
 		_, err := c.resourcesClient.Delete(ctx, groupName)
 		if err != nil {
@@ -83,7 +113,7 @@ func shouldDeleteResourceGroup(input resources.Group, prefix string) bool {
 		}
 	}
 
-	for k, _ := range input.Tags {
+	for k := range input.Tags {
 		if strings.EqualFold(k, "donotdelete") {
 			return false
 		}
