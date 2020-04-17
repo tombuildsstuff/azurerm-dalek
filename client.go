@@ -5,14 +5,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/resources/mgmt/resources"
-	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/locks"
+	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/go-azure-helpers/authentication"
+	`github.com/hashicorp/go-azure-helpers/sender`
 )
 
 type ArmClient struct {
 	resourcesClient *resources.GroupsClient
+	locksClient     *locks.ManagementLocksClient
 }
 
 func buildArmClient() (*ArmClient, error) {
@@ -57,13 +59,15 @@ func buildArmClient() (*ArmClient, error) {
 		return nil, fmt.Errorf("Error building ARM Client: %s", err)
 	}
 
-	oauthConfig, err := adal.NewOAuthConfig(environment.ActiveDirectoryEndpoint, client.TenantID)
+	sender := sender.BuildSender("AzureRM Dalek")
+
+	oauthConfig, err := client.BuildOAuthConfig(environment.ActiveDirectoryEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	endpoint := environment.ResourceManagerEndpoint
-	auth, err := client.GetAuthorizationToken(oauthConfig, environment.TokenAudience)
+	auth, err := client.GetAuthorizationToken(sender, oauthConfig, environment.TokenAudience)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +75,12 @@ func buildArmClient() (*ArmClient, error) {
 	resourcesClient := resources.NewGroupsClientWithBaseURI(endpoint, client.SubscriptionID)
 	resourcesClient.Authorizer = auth
 
+	locksClient := locks.NewManagementLocksClientWithBaseURI(endpoint, client.SubscriptionID)
+	locksClient.Authorizer = auth
+
 	armClient := ArmClient{
 		resourcesClient: &resourcesClient,
+		locksClient:     &locksClient,
 	}
 
 	return &armClient, nil
