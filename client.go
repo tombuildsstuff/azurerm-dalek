@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"os"
 	"strings"
 
@@ -12,12 +13,16 @@ import (
 	`github.com/hashicorp/go-azure-helpers/sender`
 )
 
-type ArmClient struct {
-	resourcesClient *resources.GroupsClient
-	locksClient     *locks.ManagementLocksClient
+type AzureClient struct {
+	applicationsClient      *graphrbac.ApplicationsClient
+	groupsClient            *graphrbac.GroupsClient
+	locksClient             *locks.ManagementLocksClient
+	resourcesClient         *resources.GroupsClient
+	servicePrincipalsClient *graphrbac.ServicePrincipalsClient
+	usersClient             *graphrbac.UsersClient
 }
 
-func buildArmClient() (*ArmClient, error) {
+func buildAzureClient() (*AzureClient, error) {
 	environmentName := os.Getenv("ARM_ENVIRONMENT")
 	if environmentName == "" {
 		environmentName = azure.PublicCloud.Name
@@ -59,29 +64,49 @@ func buildArmClient() (*ArmClient, error) {
 		return nil, fmt.Errorf("Error building ARM Client: %s", err)
 	}
 
-	sender := sender.BuildSender("AzureRM Dalek")
+	sender := sender.BuildSender("Azure Dalek")
 
 	oauthConfig, err := client.BuildOAuthConfig(environment.ActiveDirectoryEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	endpoint := environment.ResourceManagerEndpoint
-	auth, err := client.GetAuthorizationToken(sender, oauthConfig, environment.TokenAudience)
+	resourceManagerAuth, err := client.GetAuthorizationToken(sender, oauthConfig, environment.TokenAudience)
 	if err != nil {
 		return nil, err
 	}
 
-	resourcesClient := resources.NewGroupsClientWithBaseURI(endpoint, client.SubscriptionID)
-	resourcesClient.Authorizer = auth
+	resourcesClient := resources.NewGroupsClientWithBaseURI(environment.ResourceManagerEndpoint, client.SubscriptionID)
+	resourcesClient.Authorizer = resourceManagerAuth
 
-	locksClient := locks.NewManagementLocksClientWithBaseURI(endpoint, client.SubscriptionID)
-	locksClient.Authorizer = auth
+	locksClient := locks.NewManagementLocksClientWithBaseURI(environment.ResourceManagerEndpoint, client.SubscriptionID)
+	locksClient.Authorizer = resourceManagerAuth
 
-	armClient := ArmClient{
-		resourcesClient: &resourcesClient,
-		locksClient:     &locksClient,
+	graphAuth, err := client.GetAuthorizationToken(sender, oauthConfig, environment.GraphEndpoint)
+	if err != nil {
+		return nil, err
 	}
 
-	return &armClient, nil
+	applicationsClient := graphrbac.NewApplicationsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
+	applicationsClient.Authorizer = graphAuth
+
+	groupsClient := graphrbac.NewGroupsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
+	groupsClient.Authorizer = graphAuth
+
+	servicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
+	servicePrincipalsClient.Authorizer = graphAuth
+
+	usersClient := graphrbac.NewUsersClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
+	usersClient.Authorizer = graphAuth
+
+	azureClient := AzureClient{
+		applicationsClient:      &applicationsClient,
+		groupsClient:            &groupsClient,
+		locksClient:             &locksClient,
+		resourcesClient:         &resourcesClient,
+		servicePrincipalsClient: &servicePrincipalsClient,
+		usersClient:             &usersClient,
+	}
+
+	return &azureClient, nil
 }
