@@ -2,6 +2,7 @@
 github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/locks
 github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources
 github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
+github.com/Azure/azure-sdk-for-go/services/netapp/mgmt/2019-08-01/netapp
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-09-01/locks
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources
 github.com/Azure/azure-sdk-for-go/version

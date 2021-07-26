@@ -2,21 +2,25 @@ package main
 
 import (
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/locks"
 	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	"github.com/Azure/azure-sdk-for-go/services/netapp/mgmt/2019-08-01/netapp"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/go-azure-helpers/authentication"
-	`github.com/hashicorp/go-azure-helpers/sender`
+	"github.com/hashicorp/go-azure-helpers/sender"
 )
 
 type AzureClient struct {
 	applicationsClient      *graphrbac.ApplicationsClient
 	groupsClient            *graphrbac.GroupsClient
 	locksClient             *locks.ManagementLocksClient
+	netappAccountsClient    *netapp.AccountsClient
+	netappPoolsClient       *netapp.PoolsClient
+	netappVolumesClient     *netapp.VolumesClient
 	resourcesClient         *resources.GroupsClient
 	servicePrincipalsClient *graphrbac.ServicePrincipalsClient
 	usersClient             *graphrbac.UsersClient
@@ -99,10 +103,22 @@ func buildAzureClient() (*AzureClient, error) {
 	usersClient := graphrbac.NewUsersClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
 	usersClient.Authorizer = graphAuth
 
+	netappAccountsClient := netapp.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, client.SubscriptionID)
+	netappAccountsClient.Authorizer = resourceManagerAuth
+
+	netappPoolsClient := netapp.NewPoolsClientWithBaseURI(environment.ResourceManagerEndpoint, client.SubscriptionID)
+	netappPoolsClient.Authorizer = resourceManagerAuth
+
+	netappVolumesClient := netapp.NewVolumesClientWithBaseURI(environment.ResourceManagerEndpoint, client.SubscriptionID)
+	netappVolumesClient.Authorizer = resourceManagerAuth
+
 	azureClient := AzureClient{
 		applicationsClient:      &applicationsClient,
 		groupsClient:            &groupsClient,
 		locksClient:             &locksClient,
+		netappAccountsClient:    &netappAccountsClient,
+		netappPoolsClient:       &netappPoolsClient,
+		netappVolumesClient:     &netappVolumesClient,
 		resourcesClient:         &resourcesClient,
 		servicePrincipalsClient: &servicePrincipalsClient,
 		usersClient:             &usersClient,

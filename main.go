@@ -18,7 +18,6 @@ func main() {
 	client, err := buildAzureClient()
 	if err != nil {
 		panic(fmt.Errorf("[ERROR] Unable to create Azure Clients: %+v", err))
-		return
 	}
 
 	prefix := flag.String("prefix", "acctest", "-prefix=acctest")
@@ -30,6 +29,11 @@ func main() {
 	ctx := context.TODO()
 	numberOfResourceGroupsToDelete := 1000
 	actuallyDelete := strings.EqualFold(os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS"), "true")
+
+	err = client.deleteNetAppAccounts(ctx, *prefix, actuallyDelete)
+	if err != nil {
+		panic(err)
+	}
 
 	log.Printf("[DEBUG] Preparing to delete Resource Groups (actually delete: %t)..", actuallyDelete)
 	err = client.deleteResourceGroups(ctx, numberOfResourceGroupsToDelete, *prefix, actuallyDelete)
@@ -189,6 +193,96 @@ func (c AzureClient) deleteAADUsers(ctx context.Context, prefix string, actually
 				continue
 			}
 			log.Printf("[DEBUG]   Deleted AAD User %q (ObjID: %s)", displayName, id)
+		}
+	}
+
+	return nil
+}
+
+func (c AzureClient) deleteNetAppAccounts(ctx context.Context, prefix string, actuallyDelete bool) error {
+	if len(prefix) == 0 {
+		return errors.New("[ERROR] Not proceeding to delete AAD Users for safety; prefix not specified")
+	}
+
+	groups, err := c.resourcesClient.List(ctx, "", nil)
+	if err != nil {
+		return fmt.Errorf("[ERROR] Error obtaining Resource List: %+v", err)
+	}
+
+	for _, group := range groups.Values() {
+		resourceGroup := *group.Name
+
+		accounts, err := c.netappAccountsClient.List(ctx, resourceGroup)
+		if err != nil {
+			log.Printf("[Error] could not get NetApp Accounts for Resource Group %s", resourceGroup)
+		}
+
+		if accounts.Value == nil || len(*accounts.Value) == 0 {
+			continue // TODO - Specific NetApp prefix to reduce the number of API calls?
+		}
+
+	Account:
+		for _, account := range *accounts.Value {
+			accountName := *account.Name
+			pools, err := c.netappPoolsClient.List(ctx, resourceGroup, accountName)
+			if err != nil {
+				log.Printf("[Error] could not get Capacity Pools for NetApp Account %s (resource group %s)", accountName, resourceGroup)
+			}
+
+			for _, pool := range *pools.Value {
+				poolName := strings.TrimPrefix(*pool.Name, accountName+"/") // Don't ask...
+				volumes, err := c.netappVolumesClient.List(ctx, resourceGroup, accountName, poolName)
+				if err != nil {
+					log.Printf("[Error] could not get Volumes for NetApp Capacity Pool %s (Account %s, resource group %s)", poolName, accountName, resourceGroup)
+					continue Account
+				}
+
+				for _, volume := range *volumes.Value {
+					volumeName := strings.TrimPrefix(*volume.Name, fmt.Sprintf("%s/%s/", accountName, poolName))
+					if actuallyDelete {
+						future, err := c.netappVolumesClient.Delete(ctx, resourceGroup, accountName, poolName, volumeName)
+						if err != nil {
+							log.Printf("[Error] deleting NetApp Volume %s (Pool %s, Account %s, Resource Group %s)", volumeName, poolName, accountName, resourceGroup)
+							continue Account // Escape hatch, can't delete parents if Volumes exist
+						}
+						if err := future.WaitForCompletionRef(ctx, c.netappVolumesClient.Client); err != nil {
+							log.Printf("[Error] waiting for volume deletion for NetApp Volume %s (Pool %s, Account %s, Resource Group %s)", volumeName, poolName, accountName, resourceGroup)
+							continue Account // Escape hatch, can't delete parents if Volumes exist
+						}
+					} else {
+						log.Printf("NetApp Volume %s would be deleted", volumeName)
+					}
+				}
+
+				// Now Volumes are gone, we can try to delete Pools...
+				if actuallyDelete {
+					future, err := c.netappPoolsClient.Delete(ctx, resourceGroup, accountName, poolName)
+					if err != nil {
+						log.Printf("[Error] deleting NetApp Pool %s (Account %s, Resource Group %s)", poolName, accountName, resourceGroup)
+						continue Account
+					}
+					if err := future.WaitForCompletionRef(ctx, c.netappPoolsClient.Client); err != nil {
+						log.Printf("[Error] waiting for volume deletion for NetApp Pool %s (Account %s, Resource Group %s)", poolName, accountName, resourceGroup)
+						continue Account // Escape hatch, can't delete Accounts if Pools exist
+					}
+				} else {
+					log.Printf("NetApp Capacity Pool %s would be deleted", poolName)
+				}
+			}
+
+			if actuallyDelete {
+				future, err := c.netappAccountsClient.Delete(ctx, resourceGroup, accountName)
+				if err != nil {
+					log.Printf("[Error] deleting NetApp Account %s (Resource Group %s)", accountName, resourceGroup)
+					continue
+				}
+				if err := future.WaitForCompletionRef(ctx, c.netappAccountsClient.Client); err != nil {
+					log.Printf("[Error] waiting for deletion of NetApp Account %s (Resource Group %s)", accountName, resourceGroup)
+					continue
+				}
+			} else {
+				log.Printf("NetApp Account %s would be deleted", accountName)
+			}
 		}
 	}
 
