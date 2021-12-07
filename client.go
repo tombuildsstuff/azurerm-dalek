@@ -1,47 +1,65 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/locks"
 	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/hashicorp/go-azure-helpers/authentication"
-	`github.com/hashicorp/go-azure-helpers/sender`
+	"github.com/hashicorp/go-azure-helpers/sender"
+	"github.com/manicminer/hamilton/auth"
+	"github.com/manicminer/hamilton/environments"
+	"github.com/manicminer/hamilton/msgraph"
 )
 
-type AzureClient struct {
+type aadGraphClients struct {
 	applicationsClient      *graphrbac.ApplicationsClient
 	groupsClient            *graphrbac.GroupsClient
-	locksClient             *locks.ManagementLocksClient
-	resourcesClient         *resources.GroupsClient
 	servicePrincipalsClient *graphrbac.ServicePrincipalsClient
 	usersClient             *graphrbac.UsersClient
 }
 
-func buildAzureClient() (*AzureClient, error) {
+type msGraphClients struct {
+	applicationsClient      *msgraph.ApplicationsClient
+	groupsClient            *msgraph.GroupsClient
+	servicePrincipalsClient *msgraph.ServicePrincipalsClient
+	usersClient             *msgraph.UsersClient
+}
+
+type AzureClient struct {
+	aadGraph        *aadGraphClients
+	msGraph         *msGraphClients
+	locksClient     *locks.ManagementLocksClient
+	resourcesClient *resources.GroupsClient
+}
+
+func buildAzureClient(ctx context.Context) (*AzureClient, error) {
 	environmentName := os.Getenv("ARM_ENVIRONMENT")
 	if environmentName == "" {
-		environmentName = azure.PublicCloud.Name
+		environmentName = "public"
 	}
 
-	var environment *azure.Environment
+	var environment environments.Environment
 	if strings.Contains(strings.ToLower(environmentName), "stack") {
 		// for Azure Stack we have to load the Environment from the URI
 		endpoint := os.Getenv("ARM_ENDPOINT")
-		env, err := authentication.LoadEnvironmentFromUrl(endpoint)
+		env, err := environments.EnvironmentFromMetadata(endpoint)
 		if err != nil {
-			return nil, fmt.Errorf("Error determining Environment from Endpoint %q: %s", endpoint, err)
+			return nil, fmt.Errorf("determining Environment from endpoint %q: %s", endpoint, err)
+		}
+		if env == nil {
+			return nil, fmt.Errorf("returned Environment from Endpoint %q was nil", endpoint)
 		}
 
-		environment = env
+		environment = *env
 	} else {
-		env, err := authentication.DetermineEnvironment(environmentName)
+		env, err := environments.EnvironmentFromString(environmentName)
 		if err != nil {
-			return nil, fmt.Errorf("Error determining Environment %q: %s", environmentName, err)
+			return nil, fmt.Errorf("determining Environment %q: %s", environmentName, err)
 		}
 
 		environment = env
@@ -59,53 +77,79 @@ func buildAzureClient() (*AzureClient, error) {
 		SupportsAzureCliToken:    true,
 	}
 
-	client, err := builder.Build()
+	config, err := builder.Build()
 	if err != nil {
-		return nil, fmt.Errorf("Error building ARM Client: %s", err)
+		return nil, fmt.Errorf("building config: %s", err)
 	}
 
 	sender := sender.BuildSender("Azure Dalek")
 
-	oauthConfig, err := client.BuildOAuthConfig(environment.ActiveDirectoryEndpoint)
+	oauthConfig, err := config.BuildOAuthConfig(string(environment.AzureADEndpoint))
 	if err != nil {
 		return nil, err
 	}
 
-	resourceManagerAuth, err := client.GetAuthorizationToken(sender, oauthConfig, environment.TokenAudience)
+	resourceManagerAuth, err := config.GetMSALToken(ctx, environment.ResourceManager, sender, oauthConfig, string(environment.ResourceManager.Endpoint))
 	if err != nil {
 		return nil, err
 	}
 
-	resourcesClient := resources.NewGroupsClientWithBaseURI(environment.ResourceManagerEndpoint, client.SubscriptionID)
+	resourcesClient := resources.NewGroupsClientWithBaseURI(string(environment.ResourceManager.Endpoint), config.SubscriptionID)
 	resourcesClient.Authorizer = resourceManagerAuth
 
-	locksClient := locks.NewManagementLocksClientWithBaseURI(environment.ResourceManagerEndpoint, client.SubscriptionID)
+	locksClient := locks.NewManagementLocksClientWithBaseURI(string(environment.ResourceManager.Endpoint), config.SubscriptionID)
 	locksClient.Authorizer = resourceManagerAuth
 
-	graphAuth, err := client.GetAuthorizationToken(sender, oauthConfig, environment.GraphEndpoint)
+	aadGraphAuth, err := config.GetMSALToken(ctx, environment.AadGraph, sender, oauthConfig, string(environment.AadGraph.Endpoint))
 	if err != nil {
 		return nil, err
 	}
 
-	applicationsClient := graphrbac.NewApplicationsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	applicationsClient.Authorizer = graphAuth
+	aadGraphApplicationsClient := graphrbac.NewApplicationsClientWithBaseURI(string(environment.AadGraph.Endpoint), config.TenantID)
+	aadGraphApplicationsClient.Authorizer = aadGraphAuth
 
-	groupsClient := graphrbac.NewGroupsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	groupsClient.Authorizer = graphAuth
+	aadGraphGroupsClient := graphrbac.NewGroupsClientWithBaseURI(string(environment.AadGraph.Endpoint), config.TenantID)
+	aadGraphGroupsClient.Authorizer = aadGraphAuth
 
-	servicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	servicePrincipalsClient.Authorizer = graphAuth
+	aadGraphServicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(string(environment.AadGraph.Endpoint), config.TenantID)
+	aadGraphServicePrincipalsClient.Authorizer = aadGraphAuth
 
-	usersClient := graphrbac.NewUsersClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	usersClient.Authorizer = graphAuth
+	aadGraphUsersClient := graphrbac.NewUsersClientWithBaseURI(string(environment.AadGraph.Endpoint), config.TenantID)
+	aadGraphUsersClient.Authorizer = aadGraphAuth
 
 	azureClient := AzureClient{
-		applicationsClient:      &applicationsClient,
-		groupsClient:            &groupsClient,
-		locksClient:             &locksClient,
-		resourcesClient:         &resourcesClient,
-		servicePrincipalsClient: &servicePrincipalsClient,
-		usersClient:             &usersClient,
+		aadGraph: &aadGraphClients{
+			applicationsClient:      &aadGraphApplicationsClient,
+			groupsClient:            &aadGraphGroupsClient,
+			servicePrincipalsClient: &aadGraphServicePrincipalsClient,
+			usersClient:             &aadGraphUsersClient,
+		},
+		locksClient:     &locksClient,
+		resourcesClient: &resourcesClient,
+	}
+
+	if environment.MsGraph.IsAvailable() {
+		msGraphAuth, err := config.GetMSALToken(ctx, environment.MsGraph, sender, oauthConfig, string(environment.MsGraph.Endpoint))
+		if err != nil {
+			return nil, err
+		}
+
+		authorizer, err := auth.NewAutorestAuthorizerWrapper(msGraphAuth)
+		if err != nil {
+			return nil, err
+		}
+
+		azureClient.msGraph = &msGraphClients{
+			applicationsClient:      msgraph.NewApplicationsClient(config.TenantID),
+			groupsClient:            msgraph.NewGroupsClient(config.TenantID),
+			servicePrincipalsClient: msgraph.NewServicePrincipalsClient(config.TenantID),
+			usersClient:             msgraph.NewUsersClient(config.TenantID),
+		}
+
+		azureClient.msGraph.applicationsClient.BaseClient.Authorizer = authorizer
+		azureClient.msGraph.groupsClient.BaseClient.Authorizer = authorizer
+		azureClient.msGraph.servicePrincipalsClient.BaseClient.Authorizer = authorizer
+		azureClient.msGraph.usersClient.BaseClient.Authorizer = authorizer
 	}
 
 	return &azureClient, nil

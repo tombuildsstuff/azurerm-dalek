@@ -10,12 +10,15 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
+	"github.com/manicminer/hamilton/odata"
 )
 
 func main() {
 	log.Print("Starting Azure Dalek..")
 
-	client, err := buildAzureClient()
+	ctx := context.TODO()
+
+	client, err := buildAzureClient(ctx)
 	if err != nil {
 		panic(fmt.Errorf("[ERROR] Unable to create Azure Clients: %+v", err))
 		return
@@ -27,15 +30,14 @@ func main() {
 
 	log.Printf("[DEBUG] Required Prefix Match is %q", *prefix)
 
-	ctx := context.TODO()
-	numberOfResourceGroupsToDelete := 1000
+	//numberOfResourceGroupsToDelete := 1000
 	actuallyDelete := strings.EqualFold(os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS"), "true")
 
-	log.Printf("[DEBUG] Preparing to delete Resource Groups (actually delete: %t)..", actuallyDelete)
-	err = client.deleteResourceGroups(ctx, numberOfResourceGroupsToDelete, *prefix, actuallyDelete)
-	if err != nil {
-		panic(err)
-	}
+	//log.Printf("[DEBUG] Preparing to delete Resource Groups (actually delete: %t)..", actuallyDelete)
+	//err = client.deleteResourceGroups(ctx, numberOfResourceGroupsToDelete, *prefix, actuallyDelete)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	log.Printf("[DEBUG] Preparing to delete AAD Service Principals (actually delete: %t)..", actuallyDelete)
 	err = client.deleteAADServicePrincipals(ctx, *prefix, actuallyDelete)
@@ -67,29 +69,61 @@ func (c AzureClient) deleteAADApplications(ctx context.Context, prefix string, a
 		return errors.New("[ERROR] Not proceeding to delete AAD Applications for safety; prefix not specified")
 	}
 
-	apps, err := c.applicationsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
-	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Applications with prefix: %q", prefix)
-	}
+	if c.msGraph != nil {
+		log.Println("[DEBUG]   Using Microsoft Graph to delete Applications")
+		apps, _, err := c.msGraph.applicationsClient.List(ctx, odata.Query{Filter: fmt.Sprintf("startswith(displayName, '%s')", prefix)})
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Applications with prefix %q: %v", prefix, err)
+		}
+		if apps == nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Applications with prefix %q: apps result was nil", prefix)
+		}
 
-	for _, app := range apps.Values() {
-		id := *app.ObjectID
-		appID := *app.AppID
-		displayName := *app.DisplayName
-
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
-				continue
+		for _, app := range *apps {
+			if app.ID == nil || app.DisplayName == nil {
+				log.Printf("[INFO]   Skipping AAD Application with nil ID or DisplayName")
 			}
+			if strings.TrimPrefix(*app.DisplayName, prefix) != *app.DisplayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD Application %q (ID: %s)", *app.DisplayName, *app.ID)
+					continue
+				}
 
-			log.Printf("[DEBUG]   Deleting AAD Application %q (AppID: %s, ObjectId: %s)...", displayName, appID, id)
-			_, err := c.applicationsClient.Delete(ctx, id)
-			if err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD Application %q (AppID: %s, ObjID: %s): %s", displayName, appID, id, err)
-				continue
+				log.Printf("[DEBUG]   Deleting AAD Application %q (ID: %s)...", *app.DisplayName, *app.ID)
+				_, err := c.aadGraph.applicationsClient.Delete(ctx, *app.ID)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD Application %q (ID: %s): %v", *app.DisplayName, *app.ID, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD Application %q (ID: %s)", *app.DisplayName, *app.ID)
 			}
-			log.Printf("[DEBUG]   Deleted AAD Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
+		}
+	} else {
+		log.Println("[DEBUG]   Using Azure Active Directory Graph to delete Applications")
+		apps, err := c.aadGraph.applicationsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Applications with prefix: %q", prefix)
+		}
+
+		for _, app := range apps.Values() {
+			id := *app.ObjectID
+			appID := *app.AppID
+			displayName := *app.DisplayName
+
+			if strings.TrimPrefix(displayName, prefix) != displayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
+					continue
+				}
+
+				log.Printf("[DEBUG]   Deleting AAD Application %q (AppID: %s, ObjectId: %s)...", displayName, appID, id)
+				_, err := c.aadGraph.applicationsClient.Delete(ctx, id)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD Application %q (AppID: %s, ObjID: %s): %s", displayName, appID, id, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
+			}
 		}
 	}
 
@@ -101,28 +135,62 @@ func (c AzureClient) deleteAADGroups(ctx context.Context, prefix string, actuall
 		return errors.New("[ERROR] Not proceeding to delete AAD Groups for safety; prefix not specified")
 	}
 
-	groups, err := c.groupsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
-	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix: %q", prefix)
-	}
+	if c.msGraph != nil {
+		log.Println("[DEBUG]   Using Microsoft Graph to delete Groups")
 
-	for _, group := range groups.Values() {
-		id := *group.ObjectID
-		displayName := *group.DisplayName
+		groups, _, err := c.msGraph.groupsClient.List(ctx, odata.Query{Filter: fmt.Sprintf("startswith(displayName, '%s')", prefix)})
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix %q: %v", prefix, err)
+		}
+		if groups == nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix %q: groups result was nil", prefix)
+		}
 
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD Group %q (ObjID: %s)", displayName, id)
-				continue
+		for _, group := range *groups {
+			if group.ID == nil || group.DisplayName == nil {
+				log.Printf("[INFO]   Skipping AAD Group with nil ID or DisplayName")
 			}
+			if strings.TrimPrefix(*group.DisplayName, prefix) != *group.DisplayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD Group %q (ID: %s)", *group.DisplayName, *group.ID)
+					continue
+				}
 
-			log.Printf("[DEBUG]   Deleting AAD Group %q (ObjectId: %s)...", displayName, id)
-			_, err := c.groupsClient.Delete(ctx, id)
-			if err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD Group %q (ObjID: %s): %s", displayName, id, err)
-				continue
+				log.Printf("[DEBUG]   Deleting AAD Group %q (ID: %s)...", *group.DisplayName, *group.ID)
+				_, err := c.aadGraph.groupsClient.Delete(ctx, *group.ID)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD Group %q (ID: %s): %v", *group.DisplayName, *group.ID, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD Group %q (ID: %s)", *group.DisplayName, *group.ID)
 			}
-			log.Printf("[DEBUG]   Deleted AAD Group %q (ObjID: %s)", displayName, id)
+		}
+	} else {
+		log.Println("[DEBUG]   Using Azure Active Directory Graph to delete Groups")
+
+		groups, err := c.aadGraph.groupsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix: %q", prefix)
+		}
+
+		for _, group := range groups.Values() {
+			id := *group.ObjectID
+			displayName := *group.DisplayName
+
+			if strings.TrimPrefix(displayName, prefix) != displayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD Group %q (ObjID: %s)", displayName, id)
+					continue
+				}
+
+				log.Printf("[DEBUG]   Deleting AAD Group %q (ObjectId: %s)...", displayName, id)
+				_, err := c.aadGraph.groupsClient.Delete(ctx, id)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD Group %q (ObjID: %s): %s", displayName, id, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD Group %q (ObjID: %s)", displayName, id)
+			}
 		}
 	}
 
@@ -134,28 +202,62 @@ func (c AzureClient) deleteAADServicePrincipals(ctx context.Context, prefix stri
 		return errors.New("[ERROR] Not proceeding to delete AAD Service Principals for safety; prefix not specified")
 	}
 
-	servicePrincipals, err := c.servicePrincipalsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
-	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Service Principals with prefix: %q", prefix)
-	}
+	if c.msGraph != nil {
+		log.Println("[DEBUG]   Using Microsoft Graph to delete Service Principals")
 
-	for _, servicePrincipal := range servicePrincipals.Values() {
-		id := *servicePrincipal.ObjectID
-		displayName := *servicePrincipal.DisplayName
+		servicePrincipals, _, err := c.msGraph.servicePrincipalsClient.List(ctx, odata.Query{Filter: fmt.Sprintf("startswith(displayName, '%s')", prefix)})
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Service Principals with prefix %q: %v", prefix, err)
+		}
+		if servicePrincipals == nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Service Principals with prefix %q: servicePrincipals result was nil", prefix)
+		}
 
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD Service Principal %q (ObjID: %s)", displayName, id)
-				continue
+		for _, servicePrincipal := range *servicePrincipals {
+			if servicePrincipal.ID == nil || servicePrincipal.DisplayName == nil {
+				log.Printf("[INFO]   Skipping AAD Service Principal with nil ID or DisplayName")
 			}
+			if strings.TrimPrefix(*servicePrincipal.DisplayName, prefix) != *servicePrincipal.DisplayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD Service Principal %q (ID: %s)", *servicePrincipal.DisplayName, *servicePrincipal.ID)
+					continue
+				}
 
-			log.Printf("[DEBUG]   Deleting AAD Service Principal %q (ObjectId: %s)...", displayName, id)
-			_, err := c.servicePrincipalsClient.Delete(ctx, id)
-			if err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD Service Principal %q (ObjID: %s): %s", displayName, id, err)
-				continue
+				log.Printf("[DEBUG]   Deleting AAD Service Principal %q (ID: %s)...", *servicePrincipal.DisplayName, *servicePrincipal.ID)
+				_, err := c.aadGraph.servicePrincipalsClient.Delete(ctx, *servicePrincipal.ID)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD Service Principal %q (ID: %s): %v", *servicePrincipal.DisplayName, *servicePrincipal.ID, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD Service Principal %q (ID: %s)", *servicePrincipal.DisplayName, *servicePrincipal.ID)
 			}
-			log.Printf("[DEBUG]   Deleted AAD Service Principal %q (ObjID: %s)", displayName, id)
+		}
+	} else {
+		log.Println("[DEBUG]   Using Azure Active Directory Graph to delete Service Principals")
+
+		servicePrincipals, err := c.aadGraph.servicePrincipalsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Service Principals with prefix: %q", prefix)
+		}
+
+		for _, servicePrincipal := range servicePrincipals.Values() {
+			id := *servicePrincipal.ObjectID
+			displayName := *servicePrincipal.DisplayName
+
+			if strings.TrimPrefix(displayName, prefix) != displayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD Service Principal %q (ObjID: %s)", displayName, id)
+					continue
+				}
+
+				log.Printf("[DEBUG]   Deleting AAD Service Principal %q (ObjectId: %s)...", displayName, id)
+				_, err := c.aadGraph.servicePrincipalsClient.Delete(ctx, id)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD Service Principal %q (ObjID: %s): %s", displayName, id, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD Service Principal %q (ObjID: %s)", displayName, id)
+			}
 		}
 	}
 
@@ -167,28 +269,62 @@ func (c AzureClient) deleteAADUsers(ctx context.Context, prefix string, actually
 		return errors.New("[ERROR] Not proceeding to delete AAD Users for safety; prefix not specified")
 	}
 
-	users, err := c.usersClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
-	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix: %q", prefix)
-	}
+	if c.msGraph != nil {
+		log.Println("[DEBUG]   Using Microsoft Graph to delete Users")
 
-	for _, user := range users.Values() {
-		id := *user.ObjectID
-		displayName := *user.DisplayName
+		users, _, err := c.msGraph.usersClient.List(ctx, odata.Query{Filter: fmt.Sprintf("startswith(displayName, '%s')", prefix)})
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix %q: %v", prefix, err)
+		}
+		if users == nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix %q: users result was nil", prefix)
+		}
 
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD User %q (ObjID: %s)", displayName, id)
-				continue
+		for _, user := range *users {
+			if user.ID == nil || user.DisplayName == nil {
+				log.Printf("[INFO]   Skipping AAD User with nil ID or DisplayName")
 			}
+			if strings.TrimPrefix(*user.DisplayName, prefix) != *user.DisplayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD User %q (ID: %s)", *user.DisplayName, *user.ID)
+					continue
+				}
 
-			log.Printf("[DEBUG]   Deleting AAD User %q (ObjectId: %s)...", displayName, id)
-			_, err := c.usersClient.Delete(ctx, id)
-			if err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD User %q (ObjID: %s): %s", displayName, id, err)
-				continue
+				log.Printf("[DEBUG]   Deleting AAD User %q (ID: %s)...", *user.DisplayName, *user.ID)
+				_, err := c.aadGraph.usersClient.Delete(ctx, *user.ID)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD User %q (ID: %s): %v", *user.DisplayName, *user.ID, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD User %q (ID: %s)", *user.DisplayName, *user.ID)
 			}
-			log.Printf("[DEBUG]   Deleted AAD User %q (ObjID: %s)", displayName, id)
+		}
+	} else {
+		log.Println("[DEBUG]   Using Azure Active Directory Graph to delete Users")
+
+		users, err := c.aadGraph.usersClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix), "")
+		if err != nil {
+			return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix: %q", prefix)
+		}
+
+		for _, user := range users.Values() {
+			id := *user.ObjectID
+			displayName := *user.DisplayName
+
+			if strings.TrimPrefix(displayName, prefix) != displayName {
+				if !actuallyDelete {
+					log.Printf("[DEBUG]   Would have deleted AAD User %q (ObjID: %s)", displayName, id)
+					continue
+				}
+
+				log.Printf("[DEBUG]   Deleting AAD User %q (ObjectId: %s)...", displayName, id)
+				_, err := c.aadGraph.usersClient.Delete(ctx, id)
+				if err != nil {
+					log.Printf("[DEBUG]   Error during deletion of AAD User %q (ObjID: %s): %s", displayName, id, err)
+					continue
+				}
+				log.Printf("[DEBUG]   Deleted AAD User %q (ObjID: %s)", displayName, id)
+			}
 		}
 	}
 
