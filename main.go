@@ -25,7 +25,7 @@ func main() {
 		return
 	}
 
-	prefix := flag.String("prefix", "bcctest", "-prefix=acctest")
+	prefix := flag.String("prefix", "acctest", "-prefix=acctest")
 
 	flag.Parse()
 
