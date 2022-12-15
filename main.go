@@ -65,7 +65,7 @@ func main() {
 		panic(err)
 	}
 
-	log.Printf("[DEBUG] Preparing to Management Groups (actually delete: %t)..", actuallyDelete)
+	log.Printf("[DEBUG] Preparing to delete Management Groups (actually delete: %t)..", actuallyDelete)
 	err = client.deleteManagementGroups(ctx, *prefix, actuallyDelete)
 	if err != nil {
 		panic(err)
@@ -217,7 +217,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 	}
 
 	if groups.Model == nil {
-		log.Printf("something")
+		log.Printf("[DEBUG]   No Resource Groups found")
 		return nil
 	}
 	for _, resource := range *groups.Model {
