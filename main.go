@@ -210,8 +210,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 	log.Printf("[DEBUG] Loading the first %d resource groups to delete", numberOfResourceGroupsToDelete)
 
 	subscriptionId := commonids.NewSubscriptionID(c.authClient.SubscriptionID)
-	var listOpts resourcegroups.ListOperationOptions
-	groups, err := c.resourcesClient.List(ctx, subscriptionId, listOpts)
+	groups, err := c.resourcesClient.List(ctx, subscriptionId, resourcegroups.DefaultListOperationOptions())
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error obtaining Resource List: %+v", err)
 	}
@@ -241,8 +240,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 			continue
 		}
 
-		var opts managementlocks.ListAtResourceGroupLevelOperationOptions
-		locks, lerr := c.locksClient.ListAtResourceGroupLevel(ctx, id, opts)
+		locks, lerr := c.locksClient.ListAtResourceGroupLevel(ctx, id, managementlocks.DefaultListAtResourceGroupLevelOperationOptions())
 		if lerr != nil {
 			log.Printf("[DEBUG] Error obtaining Resource Group Locks : %+v", err)
 		} else {
@@ -311,8 +309,7 @@ func (c AzureClient) deleteManagementGroups(ctx context.Context, prefix string, 
 		}
 		log.Printf("[DEBUG]   Deleting %s", id)
 
-		var deleteOpts managementgroups.DeleteOperationOptions
-		if _, err := c.managementClient.Delete(ctx, id, deleteOpts); err != nil {
+		if _, err := c.managementClient.Delete(ctx, id, managementgroups.DefaultDeleteOperationOptions()); err != nil {
 			log.Printf("[DEBUG]   Error during deletion of %s: %s", id, err)
 			continue
 		}

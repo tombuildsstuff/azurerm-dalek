@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -78,7 +79,9 @@ func buildAzureClient() (*AzureClient, error) {
 		return nil, err
 	}
 
-	resourceManagerAuth, err := client.GetMSALToken(context.Background(), api.ResourceManager, sender, oauthConfig, environment.TokenAudience)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	resourceManagerAuth, err := client.GetMSALToken(ctx, api.ResourceManager, sender, oauthConfig, environment.TokenAudience)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +95,7 @@ func buildAzureClient() (*AzureClient, error) {
 	managementClient := managementgroups.NewManagementGroupsClientWithBaseURI(environment.ResourceManagerEndpoint)
 	managementClient.Client.Authorizer = resourceManagerAuth
 
-	graphAuth, err := client.GetMSALToken(context.Background(), api.MsGraph, sender, oauthConfig, environment.TokenAudience)
+	graphAuth, err := client.GetMSALToken(ctx, api.MsGraph, sender, oauthConfig, environment.TokenAudience)
 	if err != nil {
 		return nil, err
 	}
