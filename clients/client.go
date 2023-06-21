@@ -14,13 +14,18 @@ import (
 	"strings"
 )
 
+type ResourceManagerClient struct {
+	LocksClient      *managementlocks.ManagementLocksClient
+	ManagementClient *managementgroups.ManagementGroupsClient
+	ResourcesClient  *resourcegroups.ResourceGroupsClient
+}
+
 type AzureClient struct {
+	ResourceManager ResourceManagerClient
+
 	ApplicationsClient      *graphrbac.ApplicationsClient
 	AuthClient              *authentication.Config
 	GroupsClient            *graphrbac.GroupsClient
-	LocksClient             *managementlocks.ManagementLocksClient
-	ManagementClient        *managementgroups.ManagementGroupsClient
-	ResourcesClient         *resourcegroups.ResourceGroupsClient
 	ServicePrincipalsClient *graphrbac.ServicePrincipalsClient
 	UsersClient             *graphrbac.UsersClient
 }
@@ -114,12 +119,16 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	usersClient.Authorizer = graphAuth
 
 	azureClient := AzureClient{
+		ResourceManager: ResourceManagerClient{
+			LocksClient:      &locksClient,
+			ManagementClient: &managementClient,
+			ResourcesClient:  &resourcesClient,
+		},
+
+		// TODO: move into Graph
 		ApplicationsClient:      &applicationsClient,
 		AuthClient:              client,
 		GroupsClient:            &groupsClient,
-		LocksClient:             &locksClient,
-		ManagementClient:        &managementClient,
-		ResourcesClient:         &resourcesClient,
 		ServicePrincipalsClient: &servicePrincipalsClient,
 		UsersClient:             &usersClient,
 	}

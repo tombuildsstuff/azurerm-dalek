@@ -228,7 +228,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 	opts := resourcegroups.ListOperationOptions{
 		Top: pointer.To(int64(numberOfResourceGroupsToDelete)),
 	}
-	groups, err := c.client.ResourcesClient.List(ctx, subscriptionId, opts)
+	groups, err := c.client.ResourceManager.ResourcesClient.List(ctx, subscriptionId, opts)
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error obtaining Resource List: %+v", err)
 	}
@@ -258,7 +258,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 			continue
 		}
 
-		locks, lerr := c.client.LocksClient.ListAtResourceGroupLevel(ctx, id, managementlocks.DefaultListAtResourceGroupLevelOperationOptions())
+		locks, lerr := c.client.ResourceManager.LocksClient.ListAtResourceGroupLevel(ctx, id, managementlocks.DefaultListAtResourceGroupLevelOperationOptions())
 		if lerr != nil {
 			log.Printf("[DEBUG] Error obtaining Resource Group Locks : %+v", err)
 		} else {
@@ -282,7 +282,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 						continue
 					}
 
-					if _, lerr = c.client.LocksClient.DeleteByScope(ctx, *lockId); lerr != nil {
+					if _, lerr = c.client.ResourceManager.LocksClient.DeleteByScope(ctx, *lockId); lerr != nil {
 						log.Printf("[DEBUG]   Unable to delete lock %s on resource group %q", *lock.Name, groupName)
 					}
 				}
@@ -290,7 +290,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 		}
 
 		log.Printf("[DEBUG]   Deleting Resource Group %q..", groupName)
-		if _, err := c.client.ResourcesClient.Delete(ctx, id, resourcegroups.DefaultDeleteOperationOptions()); err != nil {
+		if _, err := c.client.ResourceManager.ResourcesClient.Delete(ctx, id, resourcegroups.DefaultDeleteOperationOptions()); err != nil {
 			log.Printf("[DEBUG]   Error during deletion of Resource Group %q: %s", groupName, err)
 			continue
 		}
@@ -302,7 +302,7 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 
 func (c AzureClient) deleteManagementGroups(ctx context.Context, prefix string, actuallyDelete bool) error {
 	var listOpts managementgroups.ListOperationOptions
-	groups, err := c.client.ManagementClient.List(ctx, listOpts)
+	groups, err := c.client.ResourceManager.ManagementClient.List(ctx, listOpts)
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error obtaining Management Groups List: %+v", err)
 	}
@@ -325,7 +325,7 @@ func (c AzureClient) deleteManagementGroups(ctx context.Context, prefix string, 
 		}
 		log.Printf("[DEBUG]   Deleting %s", id)
 
-		if _, err := c.client.ManagementClient.Delete(ctx, id, managementgroups.DefaultDeleteOperationOptions()); err != nil {
+		if _, err := c.client.ResourceManager.ManagementClient.Delete(ctx, id, managementgroups.DefaultDeleteOperationOptions()); err != nil {
 			log.Printf("[DEBUG]   Error during deletion of %s: %s", id, err)
 			continue
 		}
