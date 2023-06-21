@@ -10,6 +10,7 @@ import (
 
 var SubscriptionCleaners = []SubscriptionCleaner{
 	deleteResourceGroupsInSubscriptionCleaner{},
+	purgeSoftDeletedKeyVaultsInSubscriptionCleaner{},
 }
 
 type SubscriptionCleaner interface {

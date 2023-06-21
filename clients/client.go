@@ -3,16 +3,17 @@ package clients
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	servicebusV20220101Preview "github.com/hashicorp/go-azure-sdk/resource-manager/servicebus/2022-01-01-preview"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
+	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 )
 
@@ -32,10 +33,11 @@ type ActiveDirectoryClient struct {
 }
 
 type ResourceManagerClient struct {
-	LocksClient      *managementlocks.ManagementLocksClient
-	ManagementClient *managementgroups.ManagementGroupsClient
-	ResourcesClient  *resourcegroups.ResourceGroupsClient
-	ServiceBus       *servicebusV20220101Preview.Client
+	LocksClient       *managementlocks.ManagementLocksClient
+	ManagementClient  *managementgroups.ManagementGroupsClient
+	ManagedHSMsClient *managedhsms.ManagedHsmsClient
+	ResourcesClient   *resourcegroups.ResourceGroupsClient
+	ServiceBus        *servicebusV20220101Preview.Client
 }
 
 type Credentials struct {
@@ -85,14 +87,17 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 		return nil, fmt.Errorf("environment %q was missing a Resource Manager endpoint", environment.Name)
 	}
 
-	resourcesClient := resourcegroups.NewResourceGroupsClientWithBaseURI(*resourceManagerEndpoint)
-	resourcesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
-
 	locksClient := managementlocks.NewManagementLocksClientWithBaseURI(*resourceManagerEndpoint)
 	locksClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
 	managementClient, err := managementgroups.NewManagementGroupsClientWithBaseURI(environment.ResourceManager)
 	managementClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	managedHsmsClient := managedhsms.NewManagedHsmsClientWithBaseURI(*resourceManagerEndpoint)
+	managedHsmsClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	resourcesClient := resourcegroups.NewResourceGroupsClientWithBaseURI(*resourceManagerEndpoint)
+	resourcesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
 	serviceBusClient, err := servicebusV20220101Preview.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = resourceManagerAuthorizer
@@ -131,10 +136,11 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 			UsersClient:             &usersClient,
 		},
 		ResourceManager: ResourceManagerClient{
-			LocksClient:      &locksClient,
-			ManagementClient: managementClient,
-			ResourcesClient:  &resourcesClient,
-			ServiceBus:       serviceBusClient,
+			LocksClient:       &locksClient,
+			ManagementClient:  managementClient,
+			ManagedHSMsClient: &managedHsmsClient,
+			ResourcesClient:   &resourcesClient,
+			ServiceBus:        serviceBusClient,
 		},
 		SubscriptionID: credentials.SubscriptionID,
 	}
