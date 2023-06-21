@@ -9,7 +9,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
+	"github.com/hashicorp/go-azure-helpers/lang/pointer"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
+	"github.com/hashicorp/go-uuid"
 )
 
 func main() {
@@ -60,6 +65,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	log.Printf("[DEBUG] Preparing to delete Management Groups (actually delete: %t)..", actuallyDelete)
+	err = client.deleteManagementGroups(ctx, *prefix, actuallyDelete)
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 func (c AzureClient) deleteAADApplications(ctx context.Context, prefix string, actuallyDelete bool) error {
@@ -167,7 +179,7 @@ func (c AzureClient) deleteAADUsers(ctx context.Context, prefix string, actually
 		return errors.New("[ERROR] Not proceeding to delete AAD Users for safety; prefix not specified")
 	}
 
-	users, err := c.usersClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
+	users, err := c.usersClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix), "")
 	if err != nil {
 		return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix: %q", prefix)
 	}
@@ -196,16 +208,26 @@ func (c AzureClient) deleteAADUsers(ctx context.Context, prefix string, actually
 }
 
 func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceGroupsToDelete int, prefix string, actuallyDelete bool) error {
-	max := int32(numberOfResourceGroupsToDelete)
 	log.Printf("[DEBUG] Loading the first %d resource groups to delete", numberOfResourceGroupsToDelete)
-	groups, err := c.resourcesClient.List(ctx, "", &max)
+
+	subscriptionId := commonids.NewSubscriptionID(c.authClient.SubscriptionID)
+	opts := resourcegroups.ListOperationOptions{
+		Top: pointer.To(int64(numberOfResourceGroupsToDelete)),
+	}
+	groups, err := c.resourcesClient.List(ctx, subscriptionId, opts)
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error obtaining Resource List: %+v", err)
 	}
 
-	for _, resource := range groups.Values() {
+	if groups.Model == nil {
+		log.Printf("[DEBUG]   No Resource Groups found")
+		return nil
+	}
+	for _, resource := range *groups.Model {
 		groupName := *resource.Name
 		log.Printf("[DEBUG] Resource Group: %q", groupName)
+
+		id := commonids.NewResourceGroupID(subscriptionId.SubscriptionId, groupName)
 
 		if strings.EqualFold(*resource.Properties.ProvisioningState, "Deleting") {
 			log.Println("[DEBUG]   Already being deleted - Skipping..")
@@ -222,38 +244,40 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 			continue
 		}
 
-		locks, lerr := c.locksClient.ListAtResourceGroupLevel(ctx, groupName, "")
+		locks, lerr := c.locksClient.ListAtResourceGroupLevel(ctx, id, managementlocks.DefaultListAtResourceGroupLevelOperationOptions())
 		if lerr != nil {
 			log.Printf("[DEBUG] Error obtaining Resource Group Locks : %+v", err)
 		} else {
-			for _, lock := range locks.Values() {
-				if lock.ID == nil {
-					log.Printf("[DEBUG]   Lock with nil id on %q", groupName)
-					continue
-				}
-				id := *lock.ID
+			if model := locks.Model; model != nil {
+				for _, lock := range *model {
+					if lock.Id == nil {
+						log.Printf("[DEBUG]   Lock with nil id on %q", groupName)
+						continue
+					}
+					id := *lock.Id
 
-				if lock.Name == nil {
-					log.Printf("[DEBUG]   Lock %s with nil name on %q", id, groupName)
-					continue
-				}
+					if lock.Name == nil {
+						log.Printf("[DEBUG]   Lock %s with nil name on %q", id, groupName)
+						continue
+					}
 
-				log.Printf("[DEBUG]   Atemping to remove lock %s from : %s", id, groupName)
-				parts := strings.Split(id, "/providers/Microsoft.Authorization/locks/")
-				if len(parts) != 2 {
-					log.Printf("[DEBUG]   Error splitting %s on /providers/Microsoft.Authorization/locks/", id)
-				}
-				scope := parts[0]
-				name := parts[1]
+					log.Printf("[DEBUG]   Attemping to remove lock %s from : %s", id, groupName)
 
-				if _, lerr = c.locksClient.DeleteByScope(ctx, scope, name); lerr != nil {
-					log.Printf("[DEBUG]   Unable to delete lock %s on resource group %q", *lock.Name, groupName)
+					lockId, err := managementlocks.ParseScopedLockID(id)
+					if err != nil {
+						continue
+					}
+
+					if _, lerr = c.locksClient.DeleteByScope(ctx, *lockId); lerr != nil {
+						log.Printf("[DEBUG]   Unable to delete lock %s on resource group %q", *lock.Name, groupName)
+					}
 				}
 			}
 		}
 
 		log.Printf("[DEBUG]   Deleting Resource Group %q..", groupName)
-		_, err := c.resourcesClient.Delete(ctx, groupName)
+		var deleteOpts resourcegroups.DeleteOperationOptions
+		_, err := c.resourcesClient.Delete(ctx, id, deleteOpts)
 		if err != nil {
 			log.Printf("[DEBUG]   Error during deletion of Resource Group %q: %s", groupName, err)
 			continue
@@ -264,16 +288,52 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 	return nil
 }
 
-func shouldDeleteResourceGroup(input resources.Group, prefix string) bool {
+func (c AzureClient) deleteManagementGroups(ctx context.Context, prefix string, actuallyDelete bool) error {
+	var listOpts managementgroups.ListOperationOptions
+	groups, err := c.managementClient.List(ctx, listOpts)
+	if err != nil {
+		return fmt.Errorf("[ERROR] Error obtaining Management Groups List: %+v", err)
+	}
+
+	if groups.Model == nil {
+		log.Printf("[DEBUG]   No Management Groups found")
+		return nil
+	}
+	for _, group := range *groups.Model {
+		if group.Name == nil || group.Id == nil {
+			continue
+		}
+
+		groupName := *group.Name
+		id := commonids.NewManagementGroupID(*group.Id)
+
+		if _, err := uuid.ParseUUID(groupName); err != nil {
+			log.Printf("[DEBUG]   Skipping Management Group %q", groupName)
+			continue
+		}
+		log.Printf("[DEBUG]   Deleting %s", id)
+
+		if _, err := c.managementClient.Delete(ctx, id, managementgroups.DefaultDeleteOperationOptions()); err != nil {
+			log.Printf("[DEBUG]   Error during deletion of %s: %s", id, err)
+			continue
+		}
+		log.Printf("[DEBUG]   Deleted %s", id)
+	}
+	return nil
+}
+
+func shouldDeleteResourceGroup(input resourcegroups.ResourceGroup, prefix string) bool {
 	if prefix != "" {
 		if !strings.HasPrefix(strings.ToLower(*input.Name), strings.ToLower(prefix)) {
 			return false
 		}
 	}
 
-	for k := range input.Tags {
-		if strings.EqualFold(k, "donotdelete") {
-			return false
+	if tags := input.Tags; tags != nil {
+		for k := range *tags {
+			if strings.EqualFold(k, "donotdelete") {
+				return false
+			}
 		}
 	}
 
