@@ -48,9 +48,9 @@ func run(ctx context.Context, credentials clients.Credentials, opts dalek.Option
 	log.Printf("[DEBUG] Options: %s", opts)
 
 	client := dalek.NewDalek(sdkClient, opts)
-	log.Printf("[DEBUG] Processing Resource Groups..")
-	if err := client.ResourceGroups(ctx); err != nil {
-		return fmt.Errorf("processing Resource Groups: %+v", err)
+	log.Printf("[DEBUG] Processing Resource Manager..")
+	if err := client.ResourceManager(ctx); err != nil {
+		return fmt.Errorf("processing Resource Manager: %+v", err)
 	}
 	log.Printf("[DEBUG] Processing Azure Active Directory..")
 	if err := client.ActiveDirectory(ctx); err != nil {

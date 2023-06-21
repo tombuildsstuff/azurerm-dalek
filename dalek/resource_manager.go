@@ -12,10 +12,11 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 )
 
-func (d *Dalek) ResourceGroups(ctx context.Context) error {
+func (d *Dalek) ResourceManager(ctx context.Context) error {
 	if err := d.deleteResourceGroups(ctx); err != nil {
 		return fmt.Errorf("deleting Resource Groups: %+v", err)
 	}
+	// TODO: purging HSMs within the specified location
 	return nil
 }
 
