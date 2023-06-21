@@ -18,8 +18,7 @@ import (
 type AzureClient struct {
 	ActiveDirectory ActiveDirectoryClient
 	ResourceManager ResourceManagerClient
-
-	AuthClient *authentication.Config
+	SubscriptionID  string
 }
 
 type ActiveDirectoryClient struct {
@@ -138,8 +137,7 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 			ManagementClient: &managementClient,
 			ResourcesClient:  &resourcesClient,
 		},
-
-		AuthClient: client,
+		SubscriptionID: client.SubscriptionID,
 	}
 
 	return &azureClient, nil
