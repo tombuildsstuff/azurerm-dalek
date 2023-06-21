@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/tombuildsstuff/azurerm-dalek/clients"
 	"log"
 	"os"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	"github.com/hashicorp/go-uuid"
+	"github.com/tombuildsstuff/azurerm-dalek/clients"
 )
 
 func main() {
@@ -109,7 +109,8 @@ func (c Dalek) deleteAADApplications(ctx context.Context, opts DalekOptions) err
 		return fmt.Errorf("[ERROR] Not proceeding to delete AAD Applications for safety; prefix not specified")
 	}
 
-	apps, err := c.client.ApplicationsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
+	client := c.client.ActiveDirectory.ApplicationsClient
+	apps, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
 	if err != nil {
 		return fmt.Errorf("listing AAD Applications with prefix: %q", opts.Prefix)
 	}
@@ -126,7 +127,7 @@ func (c Dalek) deleteAADApplications(ctx context.Context, opts DalekOptions) err
 			}
 
 			log.Printf("[DEBUG]   Deleting AAD Application %q (AppID: %s, ObjectId: %s)...", displayName, appID, id)
-			if _, err := c.client.ApplicationsClient.Delete(ctx, id); err != nil {
+			if _, err := client.Delete(ctx, id); err != nil {
 				log.Printf("[DEBUG]   Error during deletion of AAD Application %q (AppID: %s, ObjID: %s): %s", displayName, appID, id, err)
 				continue
 			}
@@ -142,7 +143,8 @@ func (c Dalek) deleteAADGroups(ctx context.Context, opts DalekOptions) error {
 		return errors.New("[ERROR] Not proceeding to delete AAD Groups for safety; prefix not specified")
 	}
 
-	groups, err := c.client.GroupsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
+	client := c.client.ActiveDirectory.GroupsClient
+	groups, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
 	if err != nil {
 		return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix: %q", opts.Prefix)
 	}
@@ -158,7 +160,7 @@ func (c Dalek) deleteAADGroups(ctx context.Context, opts DalekOptions) error {
 			}
 
 			log.Printf("[DEBUG]   Deleting AAD Group %q (ObjectId: %s)...", displayName, id)
-			if _, err := c.client.GroupsClient.Delete(ctx, id); err != nil {
+			if _, err := client.Delete(ctx, id); err != nil {
 				log.Printf("[DEBUG]   Error during deletion of AAD Group %q (ObjID: %s): %s", displayName, id, err)
 				continue
 			}
@@ -174,7 +176,8 @@ func (c Dalek) deleteAADServicePrincipals(ctx context.Context, opts DalekOptions
 		return errors.New("[ERROR] Not proceeding to delete AAD Service Principals for safety; prefix not specified")
 	}
 
-	servicePrincipals, err := c.client.ServicePrincipalsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
+	client := c.client.ActiveDirectory.ServicePrincipalsClient
+	servicePrincipals, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
 	if err != nil {
 		return fmt.Errorf("listing AAD Service Principals with Prefix: %q", opts.Prefix)
 	}
@@ -190,7 +193,7 @@ func (c Dalek) deleteAADServicePrincipals(ctx context.Context, opts DalekOptions
 			}
 
 			log.Printf("[DEBUG]   Deleting AAD Service Principal %q (ObjectId: %s)...", displayName, id)
-			if _, err := c.client.ServicePrincipalsClient.Delete(ctx, id); err != nil {
+			if _, err := client.Delete(ctx, id); err != nil {
 				log.Printf("[DEBUG]   Error during deletion of AAD Service Principal %q (ObjID: %s): %s", displayName, id, err)
 				continue
 			}
@@ -206,7 +209,8 @@ func (c Dalek) deleteAADUsers(ctx context.Context, opts DalekOptions) error {
 		return errors.New("[ERROR] Not proceeding to delete AAD Users for safety; prefix not specified")
 	}
 
-	users, err := c.client.UsersClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix), "")
+	client := c.client.ActiveDirectory.UsersClient
+	users, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix), "")
 	if err != nil {
 		return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix: %q", opts.Prefix)
 	}
@@ -222,7 +226,7 @@ func (c Dalek) deleteAADUsers(ctx context.Context, opts DalekOptions) error {
 			}
 
 			log.Printf("[DEBUG]   Deleting AAD User %q (ObjectId: %s)...", displayName, id)
-			if _, err := c.client.UsersClient.Delete(ctx, id); err != nil {
+			if _, err := client.Delete(ctx, id); err != nil {
 				log.Printf("[DEBUG]   Error during deletion of AAD User %q (ObjID: %s): %s", displayName, id, err)
 				continue
 			}

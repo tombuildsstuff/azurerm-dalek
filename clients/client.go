@@ -3,6 +3,8 @@ package clients
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/go-azure-helpers/authentication"
@@ -11,23 +13,28 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	"github.com/manicminer/hamilton/environments"
-	"strings"
 )
+
+type AzureClient struct {
+	ActiveDirectory ActiveDirectoryClient
+	ResourceManager ResourceManagerClient
+
+	AuthClient *authentication.Config
+}
+
+type ActiveDirectoryClient struct {
+	// TODO: refactor to use Graph
+
+	GroupsClient            *graphrbac.GroupsClient
+	ServicePrincipalsClient *graphrbac.ServicePrincipalsClient
+	UsersClient             *graphrbac.UsersClient
+	ApplicationsClient      *graphrbac.ApplicationsClient
+}
 
 type ResourceManagerClient struct {
 	LocksClient      *managementlocks.ManagementLocksClient
 	ManagementClient *managementgroups.ManagementGroupsClient
 	ResourcesClient  *resourcegroups.ResourceGroupsClient
-}
-
-type AzureClient struct {
-	ResourceManager ResourceManagerClient
-
-	ApplicationsClient      *graphrbac.ApplicationsClient
-	AuthClient              *authentication.Config
-	GroupsClient            *graphrbac.GroupsClient
-	ServicePrincipalsClient *graphrbac.ServicePrincipalsClient
-	UsersClient             *graphrbac.UsersClient
 }
 
 type Credentials struct {
@@ -40,6 +47,7 @@ type Credentials struct {
 }
 
 func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClient, error) {
+	// TODO: refactor to use go-azure-sdk and MSAL
 	var environment *azure.Environment
 	if strings.Contains(strings.ToLower(credentials.EnvironmentName), "stack") {
 		// for Azure Stack we have to load the Environment from the URI
@@ -119,18 +127,19 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	usersClient.Authorizer = graphAuth
 
 	azureClient := AzureClient{
+		ActiveDirectory: ActiveDirectoryClient{
+			ApplicationsClient:      &applicationsClient,
+			GroupsClient:            &groupsClient,
+			ServicePrincipalsClient: &servicePrincipalsClient,
+			UsersClient:             &usersClient,
+		},
 		ResourceManager: ResourceManagerClient{
 			LocksClient:      &locksClient,
 			ManagementClient: &managementClient,
 			ResourcesClient:  &resourcesClient,
 		},
 
-		// TODO: move into Graph
-		ApplicationsClient:      &applicationsClient,
-		AuthClient:              client,
-		GroupsClient:            &groupsClient,
-		ServicePrincipalsClient: &servicePrincipalsClient,
-		UsersClient:             &usersClient,
+		AuthClient: client,
 	}
 
 	return &azureClient, nil
