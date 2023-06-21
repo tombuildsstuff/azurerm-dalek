@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/hashicorp/go-azure-helpers/authentication"
-	"github.com/hashicorp/go-azure-helpers/sender"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
-	"github.com/manicminer/hamilton/environments"
+	"github.com/hashicorp/go-azure-sdk/sdk/auth"
+	"github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 )
 
 type AzureClient struct {
@@ -47,17 +46,17 @@ type Credentials struct {
 
 func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClient, error) {
 	// TODO: refactor to use go-azure-sdk and MSAL
-	var environment *azure.Environment
+	var environment *environments.Environment
 	if strings.Contains(strings.ToLower(credentials.EnvironmentName), "stack") {
 		// for Azure Stack we have to load the Environment from the URI
-		env, err := authentication.LoadEnvironmentFromUrl(credentials.Endpoint)
+		env, err := environments.FromEndpoint(ctx, credentials.Endpoint, credentials.EnvironmentName)
 		if err != nil {
 			return nil, fmt.Errorf("loading Environment from Endpoint %q: %s", credentials.Endpoint, err)
 		}
 
 		environment = env
 	} else {
-		env, err := authentication.DetermineEnvironment(credentials.EnvironmentName)
+		env, err := environments.FromName(credentials.EnvironmentName)
 		if err != nil {
 			return nil, fmt.Errorf("determining Environment %q: %s", credentials.EnvironmentName, err)
 		}
@@ -65,65 +64,54 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 		environment = env
 	}
 
-	builder := authentication.Builder{
-		TenantID:       credentials.TenantID,
-		SubscriptionID: credentials.SubscriptionID,
-		ClientID:       credentials.ClientID,
-		ClientSecret:   credentials.ClientSecret,
-		Environment:    credentials.EnvironmentName,
+	creds := auth.Credentials{
+		ClientID:     credentials.ClientID,
+		ClientSecret: credentials.ClientSecret,
+		TenantID:     credentials.TenantID,
+		Environment:  *environment,
 
-		// Feature Toggles
-		SupportsClientSecretAuth: true,
-		SupportsAzureCliToken:    true,
+		EnableAuthenticatingUsingAzureCLI:     true,
+		EnableAuthenticatingUsingClientSecret: true,
 	}
-
-	client, err := builder.Build()
+	resourceManagerAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, creds, environment.ResourceManager)
 	if err != nil {
-		return nil, fmt.Errorf("Error building ARM Client: %s", err)
+		return nil, fmt.Errorf("building Resource Manager authorizer: %+v", err)
+	}
+	resourceManagerEndpoint, ok := environment.ResourceManager.Endpoint()
+	if !ok {
+		return nil, fmt.Errorf("environment %q was missing a Resource Manager endpoint", environment.Name)
 	}
 
-	api, err := environments.EnvironmentFromString(credentials.EnvironmentName)
+	resourcesClient := resourcegroups.NewResourceGroupsClientWithBaseURI(*resourceManagerEndpoint)
+	resourcesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	locksClient := managementlocks.NewManagementLocksClientWithBaseURI(*resourceManagerEndpoint)
+	locksClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	managementClient, err := managementgroups.NewManagementGroupsClientWithBaseURI(environment.ResourceManager)
+	managementClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	var azureAdGraph environments.Api = azureActiveDirectoryGraph{}
+	azureActiveDirectoryAuth, err := auth.NewAuthorizerFromCredentials(ctx, creds, azureAdGraph)
 	if err != nil {
-		return nil, fmt.Errorf("unable to find environment %q from endpoint %q: %+v", credentials.EnvironmentName, credentials.Endpoint, err)
+		return nil, fmt.Errorf("building Azure AD Graph authorizer: %+v", err)
+	}
+	azureActiveDirectoryEndpoint, ok := azureAdGraph.Endpoint()
+	if !ok {
+		return nil, fmt.Errorf("environment %q was missing a Azure AD Graph endpoint", environment.Name)
 	}
 
-	sender := sender.BuildSender("Azure Dalek")
+	applicationsClient := graphrbac.NewApplicationsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	applicationsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	oauthConfig, err := client.BuildOAuthConfig(environment.ActiveDirectoryEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	groupsClient := graphrbac.NewGroupsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	groupsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	resourceManagerAuth, err := client.GetMSALToken(ctx, api.ResourceManager, sender, oauthConfig, environment.TokenAudience)
-	if err != nil {
-		return nil, err
-	}
+	servicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	servicePrincipalsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	resourcesClient := resourcegroups.NewResourceGroupsClientWithBaseURI(environment.ResourceManagerEndpoint)
-	resourcesClient.Client.Authorizer = resourceManagerAuth
-
-	locksClient := managementlocks.NewManagementLocksClientWithBaseURI(environment.ResourceManagerEndpoint)
-	locksClient.Client.Authorizer = resourceManagerAuth
-
-	managementClient := managementgroups.NewManagementGroupsClientWithBaseURI(environment.ResourceManagerEndpoint)
-	managementClient.Client.Authorizer = resourceManagerAuth
-
-	graphAuth, err := client.GetMSALToken(ctx, api.MsGraph, sender, oauthConfig, environment.TokenAudience)
-	if err != nil {
-		return nil, err
-	}
-
-	applicationsClient := graphrbac.NewApplicationsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	applicationsClient.Authorizer = graphAuth
-
-	groupsClient := graphrbac.NewGroupsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	groupsClient.Authorizer = graphAuth
-
-	servicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	servicePrincipalsClient.Authorizer = graphAuth
-
-	usersClient := graphrbac.NewUsersClientWithBaseURI(environment.GraphEndpoint, client.TenantID)
-	usersClient.Authorizer = graphAuth
+	usersClient := graphrbac.NewUsersClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	usersClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
 	azureClient := AzureClient{
 		ActiveDirectory: ActiveDirectoryClient{
@@ -134,10 +122,10 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 		},
 		ResourceManager: ResourceManagerClient{
 			LocksClient:      &locksClient,
-			ManagementClient: &managementClient,
+			ManagementClient: managementClient,
 			ResourcesClient:  &resourcesClient,
 		},
-		SubscriptionID: client.SubscriptionID,
+		SubscriptionID: credentials.SubscriptionID,
 	}
 
 	return &azureClient, nil
