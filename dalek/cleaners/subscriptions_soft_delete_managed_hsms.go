@@ -11,16 +11,16 @@ import (
 	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
 
-var _ SubscriptionCleaner = purgeSoftDeletedKeyVaultsInSubscriptionCleaner{}
+var _ SubscriptionCleaner = purgeSoftDeletedManagedHSMsInSubscriptionCleaner{}
 
-type purgeSoftDeletedKeyVaultsInSubscriptionCleaner struct {
+type purgeSoftDeletedManagedHSMsInSubscriptionCleaner struct {
 }
 
-func (p purgeSoftDeletedKeyVaultsInSubscriptionCleaner) Name() string {
+func (p purgeSoftDeletedManagedHSMsInSubscriptionCleaner) Name() string {
 	return "Purging Soft Deleted Key Vaults in Subscription"
 }
 
-func (p purgeSoftDeletedKeyVaultsInSubscriptionCleaner) Cleanup(ctx context.Context, subscriptionId commonids.SubscriptionId, client *clients.AzureClient, opts options.Options) error {
+func (p purgeSoftDeletedManagedHSMsInSubscriptionCleaner) Cleanup(ctx context.Context, subscriptionId commonids.SubscriptionId, client *clients.AzureClient, opts options.Options) error {
 	softDeletedHSMs, err := client.ResourceManager.ManagedHSMsClient.ListDeletedComplete(ctx, subscriptionId)
 	if err != nil {
 		return fmt.Errorf("loading the Soft-Deleted Managed HSMs within %s: %+v", subscriptionId, err)
