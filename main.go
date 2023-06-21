@@ -22,6 +22,9 @@ import (
 func main() {
 	log.Print("Starting Azure Dalek..")
 
+	prefix := flag.String("prefix", "acctest", "-prefix=acctest")
+	flag.Parse()
+
 	credentials := clients.Credentials{
 		ClientID:        os.Getenv("ARM_CLIENT_ID"),
 		ClientSecret:    os.Getenv("ARM_CLIENT_SECRET"),
@@ -30,76 +33,85 @@ func main() {
 		EnvironmentName: os.Getenv("ARM_ENVIRONMENT"),
 		Endpoint:        os.Getenv("ARM_ENDPOINT"),
 	}
+	opts := DalekOptions{
+		Prefix:                         *prefix,
+		NumberOfResourceGroupsToDelete: int64(1000),
+		ActuallyDelete:                 strings.EqualFold(os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS"), "true"),
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
 	defer cancel()
+	if err := run(ctx, credentials, opts); err != nil {
+		log.Fatalf(err.Error())
+	}
+}
+
+type DalekOptions struct {
+	Prefix                         string
+	NumberOfResourceGroupsToDelete int64
+	ActuallyDelete                 bool
+}
+
+func (o DalekOptions) String() string {
+	return fmt.Sprintf("Prefix %q / Number RGs to Delete %d / Actually Delete %t", o.Prefix, o.NumberOfResourceGroupsToDelete, o.ActuallyDelete)
+}
+
+func run(ctx context.Context, credentials clients.Credentials, opts DalekOptions) error {
 	sdkClient, err := clients.BuildAzureClient(ctx, credentials)
 	if err != nil {
-		panic(fmt.Errorf("[ERROR] Unable to create Azure Clients: %+v", err))
-		return
+		return fmt.Errorf("building Azure Clients: %+v", err)
 	}
 
-	prefix := flag.String("prefix", "acctest", "-prefix=acctest")
-	flag.Parse()
+	log.Printf("[DEBUG] Options: %s", opts)
 
-	log.Printf("[DEBUG] Required Prefix Match is %q", *prefix)
-
-	numberOfResourceGroupsToDelete := 1000
-	actuallyDelete := strings.EqualFold(os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS"), "true")
-
-	client := AzureClient{
+	client := Dalek{
 		client: *sdkClient,
 	}
 
-	log.Printf("[DEBUG] Preparing to delete Resource Groups (actually delete: %t)..", actuallyDelete)
-	err = client.deleteResourceGroups(ctx, numberOfResourceGroupsToDelete, *prefix, actuallyDelete)
-	if err != nil {
+	log.Printf("[DEBUG] Preparing to delete Resource Groups..")
+	if err = client.deleteResourceGroups(ctx, opts); err != nil {
 		panic(err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete AAD Service Principals (actually delete: %t)..", actuallyDelete)
-	err = client.deleteAADServicePrincipals(ctx, *prefix, actuallyDelete)
-	if err != nil {
+	log.Printf("[DEBUG] Preparing to delete AAD Service Principals")
+	if err = client.deleteAADServicePrincipals(ctx, opts); err != nil {
 		panic(err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete AAD Applications (actually delete: %t)..", actuallyDelete)
-	err = client.deleteAADApplications(ctx, *prefix, actuallyDelete)
-	if err != nil {
+	log.Printf("[DEBUG] Preparing to delete AAD Applications")
+	if err = client.deleteAADApplications(ctx, opts); err != nil {
 		panic(err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete AAD Groups (actually delete: %t)..", actuallyDelete)
-	err = client.deleteAADGroups(ctx, *prefix, actuallyDelete)
-	if err != nil {
+	log.Printf("[DEBUG] Preparing to delete AAD Groups")
+	if err = client.deleteAADGroups(ctx, opts); err != nil {
 		panic(err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete AAD Users (actually delete: %t)..", actuallyDelete)
-	err = client.deleteAADUsers(ctx, *prefix, actuallyDelete)
-	if err != nil {
+	log.Printf("[DEBUG] Preparing to delete AAD Users")
+	if err = client.deleteAADUsers(ctx, opts); err != nil {
 		panic(err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete Management Groups (actually delete: %t)..", actuallyDelete)
-	err = client.deleteManagementGroups(ctx, *prefix, actuallyDelete)
-	if err != nil {
+	log.Printf("[DEBUG] Preparing to delete Management Groups")
+	if err = client.deleteManagementGroups(ctx, opts); err != nil {
 		panic(err)
 	}
 
+	return nil
 }
 
-type AzureClient struct {
+type Dalek struct {
 	client clients.AzureClient
 }
 
-func (c AzureClient) deleteAADApplications(ctx context.Context, prefix string, actuallyDelete bool) error {
-	if len(prefix) == 0 {
-		return errors.New("[ERROR] Not proceeding to delete AAD Applications for safety; prefix not specified")
+func (c Dalek) deleteAADApplications(ctx context.Context, opts DalekOptions) error {
+	if len(opts.Prefix) == 0 {
+		return fmt.Errorf("[ERROR] Not proceeding to delete AAD Applications for safety; prefix not specified")
 	}
 
-	apps, err := c.client.ApplicationsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
+	apps, err := c.client.ApplicationsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
 	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Applications with prefix: %q", prefix)
+		return fmt.Errorf("listing AAD Applications with prefix: %q", opts.Prefix)
 	}
 
 	for _, app := range apps.Values() {
@@ -107,8 +119,8 @@ func (c AzureClient) deleteAADApplications(ctx context.Context, prefix string, a
 		appID := *app.AppID
 		displayName := *app.DisplayName
 
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
+		if strings.TrimPrefix(displayName, opts.Prefix) != displayName {
+			if !opts.ActuallyDelete {
 				log.Printf("[DEBUG]   Would have deleted AAD Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
 				continue
 			}
@@ -125,22 +137,22 @@ func (c AzureClient) deleteAADApplications(ctx context.Context, prefix string, a
 	return nil
 }
 
-func (c AzureClient) deleteAADGroups(ctx context.Context, prefix string, actuallyDelete bool) error {
-	if len(prefix) == 0 {
+func (c Dalek) deleteAADGroups(ctx context.Context, opts DalekOptions) error {
+	if len(opts.Prefix) == 0 {
 		return errors.New("[ERROR] Not proceeding to delete AAD Groups for safety; prefix not specified")
 	}
 
-	groups, err := c.client.GroupsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
+	groups, err := c.client.GroupsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
 	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix: %q", prefix)
+		return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix: %q", opts.Prefix)
 	}
 
 	for _, group := range groups.Values() {
 		id := *group.ObjectID
 		displayName := *group.DisplayName
 
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
+		if strings.TrimPrefix(displayName, opts.Prefix) != displayName {
+			if !opts.ActuallyDelete {
 				log.Printf("[DEBUG]   Would have deleted AAD Group %q (ObjID: %s)", displayName, id)
 				continue
 			}
@@ -157,22 +169,22 @@ func (c AzureClient) deleteAADGroups(ctx context.Context, prefix string, actuall
 	return nil
 }
 
-func (c AzureClient) deleteAADServicePrincipals(ctx context.Context, prefix string, actuallyDelete bool) error {
-	if len(prefix) == 0 {
+func (c Dalek) deleteAADServicePrincipals(ctx context.Context, opts DalekOptions) error {
+	if len(opts.Prefix) == 0 {
 		return errors.New("[ERROR] Not proceeding to delete AAD Service Principals for safety; prefix not specified")
 	}
 
-	servicePrincipals, err := c.client.ServicePrincipalsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix))
+	servicePrincipals, err := c.client.ServicePrincipalsClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix))
 	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Service Principals with prefix: %q", prefix)
+		return fmt.Errorf("listing AAD Service Principals with Prefix: %q", opts.Prefix)
 	}
 
 	for _, servicePrincipal := range servicePrincipals.Values() {
 		id := *servicePrincipal.ObjectID
 		displayName := *servicePrincipal.DisplayName
 
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
+		if strings.TrimPrefix(displayName, opts.Prefix) != displayName {
+			if !opts.ActuallyDelete {
 				log.Printf("[DEBUG]   Would have deleted AAD Service Principal %q (ObjID: %s)", displayName, id)
 				continue
 			}
@@ -189,22 +201,22 @@ func (c AzureClient) deleteAADServicePrincipals(ctx context.Context, prefix stri
 	return nil
 }
 
-func (c AzureClient) deleteAADUsers(ctx context.Context, prefix string, actuallyDelete bool) error {
-	if len(prefix) == 0 {
+func (c Dalek) deleteAADUsers(ctx context.Context, opts DalekOptions) error {
+	if len(opts.Prefix) == 0 {
 		return errors.New("[ERROR] Not proceeding to delete AAD Users for safety; prefix not specified")
 	}
 
-	users, err := c.client.UsersClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", prefix), "")
+	users, err := c.client.UsersClient.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", opts.Prefix), "")
 	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix: %q", prefix)
+		return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix: %q", opts.Prefix)
 	}
 
 	for _, user := range users.Values() {
 		id := *user.ObjectID
 		displayName := *user.DisplayName
 
-		if strings.TrimPrefix(displayName, prefix) != displayName {
-			if !actuallyDelete {
+		if strings.TrimPrefix(displayName, opts.Prefix) != displayName {
+			if !opts.ActuallyDelete {
 				log.Printf("[DEBUG]   Would have deleted AAD User %q (ObjID: %s)", displayName, id)
 				continue
 			}
@@ -221,16 +233,16 @@ func (c AzureClient) deleteAADUsers(ctx context.Context, prefix string, actually
 	return nil
 }
 
-func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceGroupsToDelete int, prefix string, actuallyDelete bool) error {
-	log.Printf("[DEBUG] Loading the first %d resource groups to delete", numberOfResourceGroupsToDelete)
+func (c Dalek) deleteResourceGroups(ctx context.Context, opts DalekOptions) error {
+	log.Printf("[DEBUG] Loading the first %d resource groups to delete", opts.NumberOfResourceGroupsToDelete)
 
 	subscriptionId := commonids.NewSubscriptionID(c.client.AuthClient.SubscriptionID)
-	opts := resourcegroups.ListOperationOptions{
-		Top: pointer.To(int64(numberOfResourceGroupsToDelete)),
+	listOpts := resourcegroups.ListOperationOptions{
+		Top: pointer.To(opts.NumberOfResourceGroupsToDelete),
 	}
-	groups, err := c.client.ResourceManager.ResourcesClient.List(ctx, subscriptionId, opts)
+	groups, err := c.client.ResourceManager.ResourcesClient.List(ctx, subscriptionId, listOpts)
 	if err != nil {
-		return fmt.Errorf("[ERROR] Error obtaining Resource List: %+v", err)
+		return fmt.Errorf("listing Resource Groups: %+v", err)
 	}
 
 	if groups.Model == nil {
@@ -242,18 +254,17 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 		log.Printf("[DEBUG] Resource Group: %q", groupName)
 
 		id := commonids.NewResourceGroupID(subscriptionId.SubscriptionId, groupName)
-
 		if strings.EqualFold(*resource.Properties.ProvisioningState, "Deleting") {
 			log.Println("[DEBUG]   Already being deleted - Skipping..")
 			continue
 		}
 
-		if !shouldDeleteResourceGroup(resource, prefix) {
+		if !shouldDeleteResourceGroup(resource, opts.Prefix) {
 			log.Println("[DEBUG]   Shouldn't Delete - Skipping..")
 			continue
 		}
 
-		if !actuallyDelete {
+		if !opts.ActuallyDelete {
 			log.Printf("[DEBUG]   Would have deleted group %q..", groupName)
 			continue
 		}
@@ -300,9 +311,9 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 	return nil
 }
 
-func (c AzureClient) deleteManagementGroups(ctx context.Context, prefix string, actuallyDelete bool) error {
-	var listOpts managementgroups.ListOperationOptions
-	groups, err := c.client.ResourceManager.ManagementClient.List(ctx, listOpts)
+func (c Dalek) deleteManagementGroups(ctx context.Context, opts DalekOptions) error {
+	// TODO: support prefix matching and actuallyDeleting
+	groups, err := c.client.ResourceManager.ManagementClient.List(ctx, managementgroups.DefaultListOperationOptions())
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error obtaining Management Groups List: %+v", err)
 	}
