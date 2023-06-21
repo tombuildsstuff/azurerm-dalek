@@ -18,22 +18,22 @@ It's also possible to use the following command line flags:
 
 * `prefix` - (Optional) An optional prefix for Resource Group names. 
 
-## Dependencies
+## Dependencies
 
-* Go 1.11
+* Go 1.19
 
 ## Example Usage
 
 To delete using your Azure CLI Credentials against Azure Public:
 
-```
+```sh
 $ go build .
 $ YES_I_REALLY_WANT_TO_DELETE_THINGS="true" ./azurerm-dalek
 ```
 
 To delete with a Service Principal against Azure Public:
 
-```
+```sh
 $ export ARM_CLIENT_ID="00000000-0000-0000-0000-000000000000"
 $ export ARM_CLIENT_SECRET="00000000-0000-0000-0000-000000000000"
 $ export ARM_ENVIRONMENT="public"
@@ -45,14 +45,14 @@ $ YES_I_REALLY_WANT_TO_DELETE_THINGS="true" ./azurerm-dalek
 
 To delete using your Azure CLI Credentials against Azure Stack:
 
-```
+```sh
 $ go build .
 $ YES_I_REALLY_WANT_TO_DELETE_THINGS="true" ./azurerm-dalek
 ```
 
 To delete with a Service Principal against Azure Stack:
 
-```
+```sh
 $ export ARM_CLIENT_ID="00000000-0000-0000-0000-000000000000"
 $ export ARM_CLIENT_SECRET="00000000-0000-0000-0000-000000000000"
 $ export ARM_ENVIRONMENT="public"
