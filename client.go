@@ -67,7 +67,7 @@ func buildAzureClient() (*AzureClient, error) {
 		return nil, fmt.Errorf("Error building ARM Client: %s", err)
 	}
 
-	api, err := environments.EnvironmentFromString("")
+	api, err := environments.EnvironmentFromString(environmentName)
 	if err != nil {
 		return nil, fmt.Errorf("unable to find environment %q from endpoint %q: %+v", environmentName, endpoint, err)
 	}

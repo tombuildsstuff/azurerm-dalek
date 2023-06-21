@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
@@ -210,7 +211,10 @@ func (c AzureClient) deleteResourceGroups(ctx context.Context, numberOfResourceG
 	log.Printf("[DEBUG] Loading the first %d resource groups to delete", numberOfResourceGroupsToDelete)
 
 	subscriptionId := commonids.NewSubscriptionID(c.authClient.SubscriptionID)
-	groups, err := c.resourcesClient.List(ctx, subscriptionId, resourcegroups.DefaultListOperationOptions())
+	opts := resourcegroups.ListOperationOptions{
+		Top: pointer.To(int64(numberOfResourceGroupsToDelete)),
+	}
+	groups, err := c.resourcesClient.List(ctx, subscriptionId, opts)
 	if err != nil {
 		return fmt.Errorf("[ERROR] Error obtaining Resource List: %+v", err)
 	}
