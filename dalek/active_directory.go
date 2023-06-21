@@ -10,27 +10,27 @@ import (
 func (d *Dalek) ActiveDirectory(ctx context.Context) error {
 	log.Printf("[DEBUG] Preparing to delete AAD Service Principals")
 	if err := d.deleteAADServicePrincipals(ctx); err != nil {
-		panic(err)
+		return fmt.Errorf("deleting Service Principals: %+v", err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete AAD Applications")
+	log.Printf("[DEBUG] Preparing to delete Applications")
 	if err := d.deleteAADApplications(ctx); err != nil {
-		panic(err)
+		return fmt.Errorf("deleting Applications: %+v", err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete AAD Groups")
+	log.Printf("[DEBUG] Preparing to delete Groups")
 	if err := d.deleteAADGroups(ctx); err != nil {
-		panic(err)
+		return fmt.Errorf("deleting Groups: %+v", err)
 	}
 
-	log.Printf("[DEBUG] Preparing to delete AAD Users")
+	log.Printf("[DEBUG] Preparing to delete Users")
 	if err := d.deleteAADUsers(ctx); err != nil {
-		panic(err)
+		return fmt.Errorf("deleting Users: %+v", err)
 	}
 
 	log.Printf("[DEBUG] Preparing to delete Management Groups")
 	if err := d.deleteManagementGroups(ctx); err != nil {
-		panic(err)
+		return fmt.Errorf("deleting Management Groups: %+v", err)
 	}
 
 	return nil
@@ -44,7 +44,7 @@ func (d *Dalek) deleteAADApplications(ctx context.Context) error {
 	client := d.client.ActiveDirectory.ApplicationsClient
 	apps, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix))
 	if err != nil {
-		return fmt.Errorf("listing AAD Applications with prefix: %q", d.opts.Prefix)
+		return fmt.Errorf("listing AAD Applications with prefix %q: %+v", d.opts.Prefix, err)
 	}
 
 	for _, app := range apps.Values() {
@@ -111,7 +111,7 @@ func (d *Dalek) deleteAADServicePrincipals(ctx context.Context) error {
 	client := d.client.ActiveDirectory.ServicePrincipalsClient
 	servicePrincipals, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix))
 	if err != nil {
-		return fmt.Errorf("listing AAD Service Principals with Prefix: %q", d.opts.Prefix)
+		return fmt.Errorf("listing AAD Service Principals with prefix %q: %+v", d.opts.Prefix, err)
 	}
 
 	for _, servicePrincipal := range servicePrincipals.Values() {
