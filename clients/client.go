@@ -3,12 +3,14 @@ package clients
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
+	servicebusV20220101Preview "github.com/hashicorp/go-azure-sdk/resource-manager/servicebus/2022-01-01-preview"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
@@ -33,6 +35,7 @@ type ResourceManagerClient struct {
 	LocksClient      *managementlocks.ManagementLocksClient
 	ManagementClient *managementgroups.ManagementGroupsClient
 	ResourcesClient  *resourcegroups.ResourceGroupsClient
+	ServiceBus       *servicebusV20220101Preview.Client
 }
 
 type Credentials struct {
@@ -91,6 +94,13 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	managementClient, err := managementgroups.NewManagementGroupsClientWithBaseURI(environment.ResourceManager)
 	managementClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
+	serviceBusClient, err := servicebusV20220101Preview.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
+		c.Authorizer = resourceManagerAuthorizer
+	})
+	if err != nil {
+		return nil, fmt.Errorf("building ServiceBus Client: %+v", err)
+	}
+
 	var azureAdGraph environments.Api = azureActiveDirectoryGraph{}
 	azureActiveDirectoryAuth, err := auth.NewAuthorizerFromCredentials(ctx, creds, azureAdGraph)
 	if err != nil {
@@ -124,6 +134,7 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 			LocksClient:      &locksClient,
 			ManagementClient: managementClient,
 			ResourcesClient:  &resourcesClient,
+			ServiceBus:       serviceBusClient,
 		},
 		SubscriptionID: credentials.SubscriptionID,
 	}
