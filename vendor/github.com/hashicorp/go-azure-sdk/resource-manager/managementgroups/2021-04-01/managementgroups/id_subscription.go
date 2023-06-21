@@ -7,6 +7,9 @@ import (
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/resourceids"
 )
 
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License. See NOTICE.txt in the project root for license information.
+
 var _ resourceids.ResourceId = SubscriptionId{}
 
 // SubscriptionId is a struct representing the Resource ID for a Subscription
@@ -35,11 +38,11 @@ func ParseSubscriptionID(input string) (*SubscriptionId, error) {
 	id := SubscriptionId{}
 
 	if id.GroupId, ok = parsed.Parsed["groupId"]; !ok {
-		return nil, fmt.Errorf("the segment 'groupId' was not found in the resource id %q", input)
+		return nil, resourceids.NewSegmentNotSpecifiedError(id, "groupId", *parsed)
 	}
 
 	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, fmt.Errorf("the segment 'subscriptionId' was not found in the resource id %q", input)
+		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
 	}
 
 	return &id, nil
@@ -58,11 +61,11 @@ func ParseSubscriptionIDInsensitively(input string) (*SubscriptionId, error) {
 	id := SubscriptionId{}
 
 	if id.GroupId, ok = parsed.Parsed["groupId"]; !ok {
-		return nil, fmt.Errorf("the segment 'groupId' was not found in the resource id %q", input)
+		return nil, resourceids.NewSegmentNotSpecifiedError(id, "groupId", *parsed)
 	}
 
 	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, fmt.Errorf("the segment 'subscriptionId' was not found in the resource id %q", input)
+		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
 	}
 
 	return &id, nil
