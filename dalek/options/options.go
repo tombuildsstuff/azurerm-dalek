@@ -1,4 +1,4 @@
-package dalek
+package options
 
 import (
 	"fmt"

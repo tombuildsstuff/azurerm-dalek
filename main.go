@@ -11,6 +11,7 @@ import (
 
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
 	"github.com/tombuildsstuff/azurerm-dalek/dalek"
+	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
 
 func main() {
@@ -27,10 +28,10 @@ func main() {
 		EnvironmentName: os.Getenv("ARM_ENVIRONMENT"),
 		Endpoint:        os.Getenv("ARM_ENDPOINT"),
 	}
-	opts := dalek.Options{
-		Prefix:                         *prefix,
-		NumberOfResourceGroupsToDelete: int64(1000),
+	opts := options.Options{
 		ActuallyDelete:                 strings.EqualFold(os.Getenv("YES_I_REALLY_WANT_TO_DELETE_THINGS"), "true"),
+		NumberOfResourceGroupsToDelete: int64(1000),
+		Prefix:                         *prefix,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
 	defer cancel()
@@ -39,7 +40,7 @@ func main() {
 	}
 }
 
-func run(ctx context.Context, credentials clients.Credentials, opts dalek.Options) error {
+func run(ctx context.Context, credentials clients.Credentials, opts options.Options) error {
 	sdkClient, err := clients.BuildAzureClient(ctx, credentials)
 	if err != nil {
 		return fmt.Errorf("building Azure Clients: %+v", err)
