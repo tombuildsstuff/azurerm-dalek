@@ -1,12 +1,8 @@
-package main
+package clients
 
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
-	"time"
-
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/go-azure-helpers/authentication"
@@ -15,47 +11,54 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	"github.com/manicminer/hamilton/environments"
+	"strings"
 )
 
 type AzureClient struct {
-	applicationsClient      *graphrbac.ApplicationsClient
-	authClient              *authentication.Config
-	groupsClient            *graphrbac.GroupsClient
-	locksClient             *managementlocks.ManagementLocksClient
-	managementClient        *managementgroups.ManagementGroupsClient
-	resourcesClient         *resourcegroups.ResourceGroupsClient
-	servicePrincipalsClient *graphrbac.ServicePrincipalsClient
-	usersClient             *graphrbac.UsersClient
+	ApplicationsClient      *graphrbac.ApplicationsClient
+	AuthClient              *authentication.Config
+	GroupsClient            *graphrbac.GroupsClient
+	LocksClient             *managementlocks.ManagementLocksClient
+	ManagementClient        *managementgroups.ManagementGroupsClient
+	ResourcesClient         *resourcegroups.ResourceGroupsClient
+	ServicePrincipalsClient *graphrbac.ServicePrincipalsClient
+	UsersClient             *graphrbac.UsersClient
 }
 
-func buildAzureClient() (*AzureClient, error) {
-	environmentName := os.Getenv("ARM_ENVIRONMENT")
+type Credentials struct {
+	ClientID        string
+	ClientSecret    string
+	SubscriptionID  string
+	TenantID        string
+	EnvironmentName string
+	Endpoint        string
+}
 
+func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClient, error) {
 	var environment *azure.Environment
-	endpoint := os.Getenv("ARM_ENDPOINT")
-	if strings.Contains(strings.ToLower(environmentName), "stack") {
+	if strings.Contains(strings.ToLower(credentials.EnvironmentName), "stack") {
 		// for Azure Stack we have to load the Environment from the URI
-		env, err := authentication.LoadEnvironmentFromUrl(endpoint)
+		env, err := authentication.LoadEnvironmentFromUrl(credentials.Endpoint)
 		if err != nil {
-			return nil, fmt.Errorf("Error determining Environment from Endpoint %q: %s", endpoint, err)
+			return nil, fmt.Errorf("loading Environment from Endpoint %q: %s", credentials.Endpoint, err)
 		}
 
 		environment = env
 	} else {
-		env, err := authentication.DetermineEnvironment(environmentName)
+		env, err := authentication.DetermineEnvironment(credentials.EnvironmentName)
 		if err != nil {
-			return nil, fmt.Errorf("Error determining Environment %q: %s", environmentName, err)
+			return nil, fmt.Errorf("determining Environment %q: %s", credentials.EnvironmentName, err)
 		}
 
 		environment = env
 	}
 
 	builder := authentication.Builder{
-		TenantID:       os.Getenv("ARM_TENANT_ID"),
-		SubscriptionID: os.Getenv("ARM_SUBSCRIPTION_ID"),
-		ClientID:       os.Getenv("ARM_CLIENT_ID"),
-		ClientSecret:   os.Getenv("ARM_CLIENT_SECRET"),
-		Environment:    environmentName,
+		TenantID:       credentials.TenantID,
+		SubscriptionID: credentials.SubscriptionID,
+		ClientID:       credentials.ClientID,
+		ClientSecret:   credentials.ClientSecret,
+		Environment:    credentials.EnvironmentName,
 
 		// Feature Toggles
 		SupportsClientSecretAuth: true,
@@ -67,9 +70,9 @@ func buildAzureClient() (*AzureClient, error) {
 		return nil, fmt.Errorf("Error building ARM Client: %s", err)
 	}
 
-	api, err := environments.EnvironmentFromString(environmentName)
+	api, err := environments.EnvironmentFromString(credentials.EnvironmentName)
 	if err != nil {
-		return nil, fmt.Errorf("unable to find environment %q from endpoint %q: %+v", environmentName, endpoint, err)
+		return nil, fmt.Errorf("unable to find environment %q from endpoint %q: %+v", credentials.EnvironmentName, credentials.Endpoint, err)
 	}
 
 	sender := sender.BuildSender("Azure Dalek")
@@ -79,8 +82,6 @@ func buildAzureClient() (*AzureClient, error) {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 	resourceManagerAuth, err := client.GetMSALToken(ctx, api.ResourceManager, sender, oauthConfig, environment.TokenAudience)
 	if err != nil {
 		return nil, err
@@ -113,14 +114,14 @@ func buildAzureClient() (*AzureClient, error) {
 	usersClient.Authorizer = graphAuth
 
 	azureClient := AzureClient{
-		applicationsClient:      &applicationsClient,
-		authClient:              client,
-		groupsClient:            &groupsClient,
-		locksClient:             &locksClient,
-		managementClient:        &managementClient,
-		resourcesClient:         &resourcesClient,
-		servicePrincipalsClient: &servicePrincipalsClient,
-		usersClient:             &usersClient,
+		ApplicationsClient:      &applicationsClient,
+		AuthClient:              client,
+		GroupsClient:            &groupsClient,
+		LocksClient:             &locksClient,
+		ManagementClient:        &managementClient,
+		ResourcesClient:         &resourcesClient,
+		ServicePrincipalsClient: &servicePrincipalsClient,
+		UsersClient:             &usersClient,
 	}
 
 	return &azureClient, nil
