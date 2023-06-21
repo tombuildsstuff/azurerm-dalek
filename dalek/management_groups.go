@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
@@ -18,7 +19,6 @@ func (d *Dalek) ManagementGroups(ctx context.Context) error {
 }
 
 func (d *Dalek) deleteManagementGroups(ctx context.Context) error {
-	// TODO: support prefix matching and actuallyDeleting
 	client := d.client.ResourceManager.ManagementClient
 	groups, err := client.List(ctx, managementgroups.DefaultListOperationOptions())
 	if err != nil {
@@ -33,6 +33,11 @@ func (d *Dalek) deleteManagementGroups(ctx context.Context) error {
 		if group.Name == nil || group.Id == nil {
 			continue
 		}
+		if props := group.Properties; props != nil && props.DisplayName != nil && d.opts.Prefix != "" {
+			if !strings.HasPrefix(strings.ToLower(*props.DisplayName), strings.ToLower(d.opts.Prefix)) {
+				continue
+			}
+		}
 
 		groupName := *group.Name
 		id := commonids.NewManagementGroupID(*group.Id)
@@ -41,6 +46,10 @@ func (d *Dalek) deleteManagementGroups(ctx context.Context) error {
 			log.Printf("[DEBUG]   Skipping Management Group %q", groupName)
 			continue
 		}
+		if !d.opts.ActuallyDelete {
+			log.Printf("[DEBUG] Would have deleted Management Group %q", id)
+		}
+
 		log.Printf("[DEBUG]   Deleting %s", id)
 
 		if _, err := client.Delete(ctx, id, managementgroups.DefaultDeleteOperationOptions()); err != nil {
