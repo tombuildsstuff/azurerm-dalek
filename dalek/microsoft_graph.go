@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/odata"
 )
 
-func (d *Dalek) ActiveDirectory(ctx context.Context) error {
+func (d *Dalek) MicrosoftGraph(ctx context.Context) error {
 	log.Printf("[DEBUG] Preparing to delete Service Principals")
 	if err := d.deleteMicrosoftGraphServicePrincipals(ctx); err != nil {
 		return fmt.Errorf("deleting Service Principals: %+v", err)

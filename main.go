@@ -53,9 +53,9 @@ func run(ctx context.Context, credentials clients.Credentials, opts options.Opti
 	if err := client.ResourceManager(ctx); err != nil {
 		return fmt.Errorf("processing Resource Manager: %+v", err)
 	}
-	log.Printf("[DEBUG] Processing Azure Active Directory..")
-	if err := client.ActiveDirectory(ctx); err != nil {
-		return fmt.Errorf("processing Azure Active Directory: %+v", err)
+	log.Printf("[DEBUG] Processing Microsoft Graph..")
+	if err := client.MicrosoftGraph(ctx); err != nil {
+		return fmt.Errorf("processing Microsoft Graph: %+v", err)
 	}
 	log.Printf("[DEBUG] Processing Management Groups..")
 	if err := client.ManagementGroups(ctx); err != nil {
