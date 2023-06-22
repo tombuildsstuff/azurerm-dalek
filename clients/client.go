@@ -75,7 +75,6 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 		TenantID:     credentials.TenantID,
 		Environment:  *environment,
 
-		EnableAuthenticatingUsingAzureCLI:     true,
 		EnableAuthenticatingUsingClientSecret: true,
 	}
 	resourceManagerAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, creds, environment.ResourceManager)
