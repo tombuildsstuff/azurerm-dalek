@@ -121,6 +121,10 @@ func (d *Dalek) deleteMicrosoftGraphServicePrincipals(ctx context.Context) error
 	}
 
 	for _, servicePrincipal := range *servicePrincipals {
+		if servicePrincipal.ObjectId == nil {
+			continue
+		}
+
 		id := *servicePrincipal.ObjectId
 		displayName := *servicePrincipal.DisplayName
 
