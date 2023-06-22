@@ -10,8 +10,8 @@ import (
 )
 
 func (d *Dalek) ActiveDirectory(ctx context.Context) error {
-	log.Printf("[DEBUG] Preparing to delete AAD Service Principals")
-	if err := d.deleteAADServicePrincipals(ctx); err != nil {
+	log.Printf("[DEBUG] Preparing to delete Service Principals")
+	if err := d.deleteMicrosoftGraphServicePrincipals(ctx); err != nil {
 		return fmt.Errorf("deleting Service Principals: %+v", err)
 	}
 
@@ -103,33 +103,36 @@ func (d *Dalek) deleteMicrosoftGraphGroups(ctx context.Context) error {
 	return nil
 }
 
-func (d *Dalek) deleteAADServicePrincipals(ctx context.Context) error {
+func (d *Dalek) deleteMicrosoftGraphServicePrincipals(ctx context.Context) error {
 	if len(d.opts.Prefix) == 0 {
-		return fmt.Errorf("[ERROR] Not proceeding to delete AAD Service Principals for safety; prefix not specified")
+		return fmt.Errorf("[ERROR] Not proceeding to delete Microsoft Graph Service Principals for safety; prefix not specified")
 	}
 
-	client := d.client.ActiveDirectory.ServicePrincipalsClient
-	servicePrincipals, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix))
+	client := d.client.MicrosoftGraph.ServicePrincipals
+	listFilter := odata.Query{
+		Filter: fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix),
+	}
+	servicePrincipals, _, err := client.List(ctx, listFilter)
 	if err != nil {
-		return fmt.Errorf("listing AAD Service Principals with prefix %q: %+v", d.opts.Prefix, err)
+		return fmt.Errorf("listing Microsoft Graph Service Principals with prefix %q: %+v", d.opts.Prefix, err)
 	}
 
-	for _, servicePrincipal := range servicePrincipals.Values() {
-		id := *servicePrincipal.ObjectID
+	for _, servicePrincipal := range *servicePrincipals {
+		id := *servicePrincipal.ObjectId
 		displayName := *servicePrincipal.DisplayName
 
 		if strings.TrimPrefix(displayName, d.opts.Prefix) != displayName {
 			if !d.opts.ActuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD Service Principal %q (ObjID: %s)", displayName, id)
+				log.Printf("[DEBUG] Would have deleted Microsoft Graph Service Principal %q (ObjID: %s)", displayName, id)
 				continue
 			}
 
-			log.Printf("[DEBUG]   Deleting AAD Service Principal %q (ObjectId: %s)...", displayName, id)
+			log.Printf("[DEBUG] Deleting Microsoft Graph Service Principal %q (ObjectId: %s)...", displayName, id)
 			if _, err := client.Delete(ctx, id); err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD Service Principal %q (ObjID: %s): %s", displayName, id, err)
+				log.Printf("[DEBUG] Error during deletion of Microsoft Graph Service Principal %q (ObjID: %s): %s", displayName, id, err)
 				continue
 			}
-			log.Printf("[DEBUG]   Deleted AAD Service Principal %q (ObjID: %s)", displayName, id)
+			log.Printf("[DEBUG] Deleted Microsoft Graph Service Principal %q (ObjID: %s)", displayName, id)
 		}
 	}
 

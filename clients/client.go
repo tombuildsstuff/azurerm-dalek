@@ -28,13 +28,13 @@ type AzureClient struct {
 type ActiveDirectoryClient struct {
 	// TODO: refactor to use Graph
 
-	ServicePrincipalsClient *graphrbac.ServicePrincipalsClient
-	UsersClient             *graphrbac.UsersClient
-	ApplicationsClient      *graphrbac.ApplicationsClient
+	UsersClient        *graphrbac.UsersClient
+	ApplicationsClient *graphrbac.ApplicationsClient
 }
 
 type MicrosoftGraphClient struct {
-	Groups *msgraph.GroupsClient
+	Groups            *msgraph.GroupsClient
+	ServicePrincipals *msgraph.ServicePrincipalsClient
 }
 
 type ResourceManagerClient struct {
@@ -124,6 +124,10 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	groupsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
 	groupsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
 
+	servicePrincipalsClient := msgraph.NewServicePrincipalsClient()
+	servicePrincipalsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	servicePrincipalsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
 	// Legacy / AzureAD
 	var azureAdGraph environments.Api = azureActiveDirectoryGraph{}
 	azureActiveDirectoryAuth, err := auth.NewAuthorizerFromCredentials(ctx, creds, azureAdGraph)
@@ -138,20 +142,17 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	legacyApplicationsClient := graphrbac.NewApplicationsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
 	legacyApplicationsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	legacyServicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	legacyServicePrincipalsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
-
 	legacyUsersClient := graphrbac.NewUsersClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
 	legacyUsersClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
 	azureClient := AzureClient{
 		ActiveDirectory: ActiveDirectoryClient{
-			ApplicationsClient:      &legacyApplicationsClient,
-			ServicePrincipalsClient: &legacyServicePrincipalsClient,
-			UsersClient:             &legacyUsersClient,
+			ApplicationsClient: &legacyApplicationsClient,
+			UsersClient:        &legacyUsersClient,
 		},
 		MicrosoftGraph: MicrosoftGraphClient{
-			Groups: groupsClient,
+			Groups:            groupsClient,
+			ServicePrincipals: servicePrincipalsClient,
 		},
 		ResourceManager: ResourceManagerClient{
 			LocksClient:       &locksClient,
