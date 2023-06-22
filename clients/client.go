@@ -15,10 +15,12 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
+	"github.com/manicminer/hamilton/msgraph"
 )
 
 type AzureClient struct {
 	ActiveDirectory ActiveDirectoryClient
+	MicrosoftGraph  MicrosoftGraphClient
 	ResourceManager ResourceManagerClient
 	SubscriptionID  string
 }
@@ -30,6 +32,10 @@ type ActiveDirectoryClient struct {
 	ServicePrincipalsClient *graphrbac.ServicePrincipalsClient
 	UsersClient             *graphrbac.UsersClient
 	ApplicationsClient      *graphrbac.ApplicationsClient
+}
+
+type MicrosoftGraphClient struct {
+	Groups *msgraph.GroupsClient
 }
 
 type ResourceManagerClient struct {
@@ -105,6 +111,21 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 		return nil, fmt.Errorf("building ServiceBus Client: %+v", err)
 	}
 
+	// Microsoft Graph
+	microsoftGraphAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, creds, environment.MicrosoftGraph)
+	if err != nil {
+		return nil, fmt.Errorf("building Microsoft Graph authorizer: %+v", err)
+	}
+	microsoftGraphEndpoint, ok := environment.MicrosoftGraph.Endpoint()
+	if !ok {
+		return nil, fmt.Errorf("environment %q was missing a Microsoft Graph endpoint", environment.Name)
+	}
+
+	groupsClient := msgraph.NewGroupsClient()
+	groupsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	groupsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
+	// Legacy / AzureAD
 	var azureAdGraph environments.Api = azureActiveDirectoryGraph{}
 	azureActiveDirectoryAuth, err := auth.NewAuthorizerFromCredentials(ctx, creds, azureAdGraph)
 	if err != nil {
@@ -115,24 +136,27 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 		return nil, fmt.Errorf("environment %q was missing a Azure AD Graph endpoint", environment.Name)
 	}
 
-	applicationsClient := graphrbac.NewApplicationsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	applicationsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
+	legacyApplicationsClient := graphrbac.NewApplicationsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	legacyApplicationsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	groupsClient := graphrbac.NewGroupsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	groupsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
+	legacyGroupsClient := graphrbac.NewGroupsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	legacyGroupsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	servicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	servicePrincipalsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
+	legacyServicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	legacyServicePrincipalsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	usersClient := graphrbac.NewUsersClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	usersClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
+	legacyUsersClient := graphrbac.NewUsersClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
+	legacyUsersClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
 	azureClient := AzureClient{
 		ActiveDirectory: ActiveDirectoryClient{
-			ApplicationsClient:      &applicationsClient,
-			GroupsClient:            &groupsClient,
-			ServicePrincipalsClient: &servicePrincipalsClient,
-			UsersClient:             &usersClient,
+			ApplicationsClient:      &legacyApplicationsClient,
+			GroupsClient:            &legacyGroupsClient,
+			ServicePrincipalsClient: &legacyServicePrincipalsClient,
+			UsersClient:             &legacyUsersClient,
+		},
+		MicrosoftGraph: MicrosoftGraphClient{
+			Groups: groupsClient,
 		},
 		ResourceManager: ResourceManagerClient{
 			LocksClient:       &locksClient,

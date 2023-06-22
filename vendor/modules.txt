@@ -157,6 +157,11 @@ github.com/hashicorp/terraform-plugin-sdk/v2/internal/plugin/convert
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/tfdiags
 github.com/hashicorp/terraform-plugin-sdk/v2/meta
 github.com/hashicorp/terraform-plugin-sdk/v2/terraform
+# github.com/manicminer/hamilton v0.61.0
+## explicit; go 1.16
+github.com/manicminer/hamilton/errors
+github.com/manicminer/hamilton/internal/utils
+github.com/manicminer/hamilton/msgraph
 # github.com/mattn/go-colorable v0.1.12
 ## explicit; go 1.13
 github.com/mattn/go-colorable
