@@ -48,23 +48,9 @@ type Credentials struct {
 }
 
 func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClient, error) {
-	// TODO: refactor to use go-azure-sdk and MSAL
-	var environment *environments.Environment
-	if strings.Contains(strings.ToLower(credentials.EnvironmentName), "stack") {
-		// for Azure Stack we have to load the Environment from the URI
-		env, err := environments.FromEndpoint(ctx, credentials.Endpoint, credentials.EnvironmentName)
-		if err != nil {
-			return nil, fmt.Errorf("loading Environment from Endpoint %q: %s", credentials.Endpoint, err)
-		}
-
-		environment = env
-	} else {
-		env, err := environments.FromName(credentials.EnvironmentName)
-		if err != nil {
-			return nil, fmt.Errorf("determining Environment %q: %s", credentials.EnvironmentName, err)
-		}
-
-		environment = env
+	environment, err := environmentFromCredentials(ctx, credentials)
+	if err != nil {
+		return nil, fmt.Errorf("determining Environment: %+v", err)
 	}
 
 	creds := auth.Credentials{
@@ -75,6 +61,80 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 
 		EnableAuthenticatingUsingClientSecret: true,
 	}
+
+	resourceManager, err := buildResourceManagerClient(ctx, creds, *environment)
+	if err != nil {
+		return nil, fmt.Errorf("building Resource Manager client: %+v", err)
+	}
+
+	microsoftGraph, err := buildMicrosoftGraphClient(ctx, creds, *environment)
+	if err != nil {
+		return nil, fmt.Errorf("building Microsoft Graph client: %+v", err)
+	}
+
+	azureClient := AzureClient{
+		MicrosoftGraph:  *microsoftGraph,
+		ResourceManager: *resourceManager,
+		SubscriptionID:  credentials.SubscriptionID,
+	}
+
+	return &azureClient, nil
+}
+
+func environmentFromCredentials(ctx context.Context, credentials Credentials) (*environments.Environment, error) {
+	if strings.Contains(strings.ToLower(credentials.EnvironmentName), "stack") {
+		// for Azure Stack we have to load the Environment from the URI
+		env, err := environments.FromEndpoint(ctx, credentials.Endpoint, credentials.EnvironmentName)
+		if err != nil {
+			return nil, fmt.Errorf("loading from Endpoint %q: %s", credentials.Endpoint, err)
+		}
+
+		return env, nil
+	}
+
+	env, err := environments.FromName(credentials.EnvironmentName)
+	if err != nil {
+		return nil, fmt.Errorf("loading with Name %q: %s", credentials.EnvironmentName, err)
+	}
+
+	return env, nil
+}
+
+func buildMicrosoftGraphClient(ctx context.Context, creds auth.Credentials, environment environments.Environment) (*MicrosoftGraphClient, error) {
+	microsoftGraphAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, creds, environment.MicrosoftGraph)
+	if err != nil {
+		return nil, fmt.Errorf("building Microsoft Graph authorizer: %+v", err)
+	}
+	microsoftGraphEndpoint, ok := environment.MicrosoftGraph.Endpoint()
+	if !ok {
+		return nil, fmt.Errorf("environment %q was missing a Microsoft Graph endpoint", environment.Name)
+	}
+
+	applicationsClient := msgraph.NewApplicationsClient()
+	applicationsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	applicationsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
+	groupsClient := msgraph.NewGroupsClient()
+	groupsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	groupsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
+	servicePrincipalsClient := msgraph.NewServicePrincipalsClient()
+	servicePrincipalsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	servicePrincipalsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
+	usersClient := msgraph.NewUsersClient()
+	usersClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	usersClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
+	return &MicrosoftGraphClient{
+		Applications:      applicationsClient,
+		Groups:            groupsClient,
+		ServicePrincipals: servicePrincipalsClient,
+		Users:             usersClient,
+	}, nil
+}
+
+func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, environment environments.Environment) (*ResourceManagerClient, error) {
 	resourceManagerAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, creds, environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building Resource Manager authorizer: %+v", err)
@@ -102,49 +162,11 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	if err != nil {
 		return nil, fmt.Errorf("building ServiceBus Client: %+v", err)
 	}
-
-	// Microsoft Graph
-	microsoftGraphAuthorizer, err := auth.NewAuthorizerFromCredentials(ctx, creds, environment.MicrosoftGraph)
-	if err != nil {
-		return nil, fmt.Errorf("building Microsoft Graph authorizer: %+v", err)
-	}
-	microsoftGraphEndpoint, ok := environment.MicrosoftGraph.Endpoint()
-	if !ok {
-		return nil, fmt.Errorf("environment %q was missing a Microsoft Graph endpoint", environment.Name)
-	}
-
-	applicationsClient := msgraph.NewApplicationsClient()
-	applicationsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	applicationsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
-	groupsClient := msgraph.NewGroupsClient()
-	groupsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	groupsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
-	servicePrincipalsClient := msgraph.NewServicePrincipalsClient()
-	servicePrincipalsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	servicePrincipalsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
-	usersClient := msgraph.NewUsersClient()
-	usersClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	usersClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
-	azureClient := AzureClient{
-		MicrosoftGraph: MicrosoftGraphClient{
-			Applications:      applicationsClient,
-			Groups:            groupsClient,
-			ServicePrincipals: servicePrincipalsClient,
-			Users:             usersClient,
-		},
-		ResourceManager: ResourceManagerClient{
-			LocksClient:       &locksClient,
-			ManagementClient:  managementClient,
-			ManagedHSMsClient: &managedHsmsClient,
-			ResourcesClient:   &resourcesClient,
-			ServiceBus:        serviceBusClient,
-		},
-		SubscriptionID: credentials.SubscriptionID,
-	}
-
-	return &azureClient, nil
+	return &ResourceManagerClient{
+		LocksClient:       &locksClient,
+		ManagementClient:  managementClient,
+		ManagedHSMsClient: &managedHsmsClient,
+		ResourcesClient:   &resourcesClient,
+		ServiceBus:        serviceBusClient,
+	}, nil
 }
