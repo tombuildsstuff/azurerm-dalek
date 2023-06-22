@@ -3,7 +3,6 @@ module github.com/tombuildsstuff/azurerm-dalek
 go 1.19
 
 require (
-	github.com/Azure/azure-sdk-for-go v67.1.0+incompatible
 	github.com/hashicorp/go-azure-helpers v0.56.0
 	github.com/hashicorp/go-azure-sdk v0.20230619.1075353
 	github.com/hashicorp/go-uuid v1.0.3
@@ -15,8 +14,6 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.29 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.9.23 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
-	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
-	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
