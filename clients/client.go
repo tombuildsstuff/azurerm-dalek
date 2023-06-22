@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
@@ -19,19 +18,13 @@ import (
 )
 
 type AzureClient struct {
-	ActiveDirectory ActiveDirectoryClient
 	MicrosoftGraph  MicrosoftGraphClient
 	ResourceManager ResourceManagerClient
 	SubscriptionID  string
 }
 
-type ActiveDirectoryClient struct {
-	// TODO: refactor to use Graph
-
-	ApplicationsClient *graphrbac.ApplicationsClient
-}
-
 type MicrosoftGraphClient struct {
+	Applications      *msgraph.ApplicationsClient
 	Groups            *msgraph.GroupsClient
 	ServicePrincipals *msgraph.ServicePrincipalsClient
 	Users             *msgraph.UsersClient
@@ -120,6 +113,10 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 		return nil, fmt.Errorf("environment %q was missing a Microsoft Graph endpoint", environment.Name)
 	}
 
+	applicationsClient := msgraph.NewApplicationsClient()
+	applicationsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	applicationsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
 	groupsClient := msgraph.NewGroupsClient()
 	groupsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
 	groupsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
@@ -132,25 +129,9 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	usersClient.BaseClient.Authorizer = microsoftGraphAuthorizer
 	usersClient.BaseClient.Endpoint = *microsoftGraphEndpoint
 
-	// Legacy / AzureAD
-	var azureAdGraph environments.Api = azureActiveDirectoryGraph{}
-	azureActiveDirectoryAuth, err := auth.NewAuthorizerFromCredentials(ctx, creds, azureAdGraph)
-	if err != nil {
-		return nil, fmt.Errorf("building Azure AD Graph authorizer: %+v", err)
-	}
-	azureActiveDirectoryEndpoint, ok := azureAdGraph.Endpoint()
-	if !ok {
-		return nil, fmt.Errorf("environment %q was missing a Azure AD Graph endpoint", environment.Name)
-	}
-
-	legacyApplicationsClient := graphrbac.NewApplicationsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	legacyApplicationsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
-
 	azureClient := AzureClient{
-		ActiveDirectory: ActiveDirectoryClient{
-			ApplicationsClient: &legacyApplicationsClient,
-		},
 		MicrosoftGraph: MicrosoftGraphClient{
+			Applications:      applicationsClient,
 			Groups:            groupsClient,
 			ServicePrincipals: servicePrincipalsClient,
 			Users:             usersClient,

@@ -16,7 +16,7 @@ func (d *Dalek) ActiveDirectory(ctx context.Context) error {
 	}
 
 	log.Printf("[DEBUG] Preparing to delete Applications")
-	if err := d.deleteAADApplications(ctx); err != nil {
+	if err := d.deleteMicrosoftGraphApplications(ctx); err != nil {
 		return fmt.Errorf("deleting Applications: %+v", err)
 	}
 
@@ -33,34 +33,37 @@ func (d *Dalek) ActiveDirectory(ctx context.Context) error {
 	return nil
 }
 
-func (d *Dalek) deleteAADApplications(ctx context.Context) error {
+func (d *Dalek) deleteMicrosoftGraphApplications(ctx context.Context) error {
 	if len(d.opts.Prefix) == 0 {
-		return fmt.Errorf("[ERROR] Not proceeding to delete AAD Applications for safety; prefix not specified")
+		return fmt.Errorf("[ERROR] Not proceeding to delete Microsoft Graph Applications for safety; prefix not specified")
 	}
 
-	client := d.client.ActiveDirectory.ApplicationsClient
-	apps, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix))
+	client := d.client.MicrosoftGraph.Applications
+	listFilter := odata.Query{
+		Filter: fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix),
+	}
+	apps, _, err := client.List(ctx, listFilter)
 	if err != nil {
-		return fmt.Errorf("listing AAD Applications with prefix %q: %+v", d.opts.Prefix, err)
+		return fmt.Errorf("listing Microsoft Graph Applications with prefix %q: %+v", d.opts.Prefix, err)
 	}
 
-	for _, app := range apps.Values() {
-		id := *app.ObjectID
-		appID := *app.AppID
+	for _, app := range *apps {
+		id := *app.ObjectId
+		appID := *app.AppId
 		displayName := *app.DisplayName
 
 		if strings.TrimPrefix(displayName, d.opts.Prefix) != displayName {
 			if !d.opts.ActuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
+				log.Printf("[DEBUG] Would have deleted Microsoft Graph Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
 				continue
 			}
 
-			log.Printf("[DEBUG]   Deleting AAD Application %q (AppID: %s, ObjectId: %s)...", displayName, appID, id)
+			log.Printf("[DEBUG] Deleting Microsoft Graph Application %q (AppID: %s, ObjectId: %s)...", displayName, appID, id)
 			if _, err := client.Delete(ctx, id); err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD Application %q (AppID: %s, ObjID: %s): %s", displayName, appID, id, err)
+				log.Printf("[DEBUG] Error during deletion of Microsoft Graph Application %q (AppID: %s, ObjID: %s): %s", displayName, appID, id, err)
 				continue
 			}
-			log.Printf("[DEBUG]   Deleted AAD Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
+			log.Printf("[DEBUG] Deleted Microsoft Graph Application %q (AppID: %s, ObjID: %s)", displayName, appID, id)
 		}
 	}
 
