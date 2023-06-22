@@ -26,7 +26,7 @@ func (d *Dalek) ActiveDirectory(ctx context.Context) error {
 	}
 
 	log.Printf("[DEBUG] Preparing to delete Users")
-	if err := d.deleteAADUsers(ctx); err != nil {
+	if err := d.deleteMicrosoftGraphUsers(ctx); err != nil {
 		return fmt.Errorf("deleting Users: %+v", err)
 	}
 
@@ -139,33 +139,36 @@ func (d *Dalek) deleteMicrosoftGraphServicePrincipals(ctx context.Context) error
 	return nil
 }
 
-func (d *Dalek) deleteAADUsers(ctx context.Context) error {
+func (d *Dalek) deleteMicrosoftGraphUsers(ctx context.Context) error {
 	if len(d.opts.Prefix) == 0 {
-		return fmt.Errorf("[ERROR] Not proceeding to delete AAD Users for safety; prefix not specified")
+		return fmt.Errorf("[ERROR] Not proceeding to delete Microsoft Graph Users for safety; prefix not specified")
 	}
 
-	client := d.client.ActiveDirectory.UsersClient
-	users, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix), "")
+	client := d.client.MicrosoftGraph.Users
+	listFilter := odata.Query{
+		Filter: fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix),
+	}
+	users, _, err := client.List(ctx, listFilter)
 	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Users with prefix: %q", d.opts.Prefix)
+		return fmt.Errorf("[ERROR] Unable to list Microsoft Graph Users with prefix: %q", d.opts.Prefix)
 	}
 
-	for _, user := range users.Values() {
-		id := *user.ObjectID
+	for _, user := range *users {
+		id := *user.ObjectId
 		displayName := *user.DisplayName
 
 		if strings.TrimPrefix(displayName, d.opts.Prefix) != displayName {
 			if !d.opts.ActuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD User %q (ObjID: %s)", displayName, id)
+				log.Printf("[DEBUG] Would have deleted Microsoft Graph User %q (ObjID: %s)", displayName, id)
 				continue
 			}
 
-			log.Printf("[DEBUG]   Deleting AAD User %q (ObjectId: %s)...", displayName, id)
+			log.Printf("[DEBUG] Deleting Microsoft Graph User %q (ObjectId: %s)...", displayName, id)
 			if _, err := client.Delete(ctx, id); err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD User %q (ObjID: %s): %s", displayName, id, err)
+				log.Printf("[DEBUG] Error during deletion of Microsoft Graph User %q (ObjID: %s): %s", displayName, id, err)
 				continue
 			}
-			log.Printf("[DEBUG]   Deleted AAD User %q (ObjID: %s)", displayName, id)
+			log.Printf("[DEBUG] Deleted Microsoft Graph User %q (ObjID: %s)", displayName, id)
 		}
 	}
 

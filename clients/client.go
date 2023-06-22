@@ -28,13 +28,13 @@ type AzureClient struct {
 type ActiveDirectoryClient struct {
 	// TODO: refactor to use Graph
 
-	UsersClient        *graphrbac.UsersClient
 	ApplicationsClient *graphrbac.ApplicationsClient
 }
 
 type MicrosoftGraphClient struct {
 	Groups            *msgraph.GroupsClient
 	ServicePrincipals *msgraph.ServicePrincipalsClient
+	Users             *msgraph.UsersClient
 }
 
 type ResourceManagerClient struct {
@@ -128,6 +128,10 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	servicePrincipalsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
 	servicePrincipalsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
 
+	usersClient := msgraph.NewUsersClient()
+	usersClient.BaseClient.Authorizer = microsoftGraphAuthorizer
+	usersClient.BaseClient.Endpoint = *microsoftGraphEndpoint
+
 	// Legacy / AzureAD
 	var azureAdGraph environments.Api = azureActiveDirectoryGraph{}
 	azureActiveDirectoryAuth, err := auth.NewAuthorizerFromCredentials(ctx, creds, azureAdGraph)
@@ -142,17 +146,14 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	legacyApplicationsClient := graphrbac.NewApplicationsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
 	legacyApplicationsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	legacyUsersClient := graphrbac.NewUsersClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	legacyUsersClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
-
 	azureClient := AzureClient{
 		ActiveDirectory: ActiveDirectoryClient{
 			ApplicationsClient: &legacyApplicationsClient,
-			UsersClient:        &legacyUsersClient,
 		},
 		MicrosoftGraph: MicrosoftGraphClient{
 			Groups:            groupsClient,
 			ServicePrincipals: servicePrincipalsClient,
+			Users:             usersClient,
 		},
 		ResourceManager: ResourceManagerClient{
 			LocksClient:       &locksClient,
