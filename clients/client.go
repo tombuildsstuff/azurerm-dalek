@@ -28,7 +28,6 @@ type AzureClient struct {
 type ActiveDirectoryClient struct {
 	// TODO: refactor to use Graph
 
-	GroupsClient            *graphrbac.GroupsClient
 	ServicePrincipalsClient *graphrbac.ServicePrincipalsClient
 	UsersClient             *graphrbac.UsersClient
 	ApplicationsClient      *graphrbac.ApplicationsClient
@@ -139,9 +138,6 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	legacyApplicationsClient := graphrbac.NewApplicationsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
 	legacyApplicationsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
-	legacyGroupsClient := graphrbac.NewGroupsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
-	legacyGroupsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
-
 	legacyServicePrincipalsClient := graphrbac.NewServicePrincipalsClientWithBaseURI(*azureActiveDirectoryEndpoint, credentials.TenantID)
 	legacyServicePrincipalsClient.Authorizer = autorest.AutorestAuthorizer(azureActiveDirectoryAuth)
 
@@ -151,7 +147,6 @@ func BuildAzureClient(ctx context.Context, credentials Credentials) (*AzureClien
 	azureClient := AzureClient{
 		ActiveDirectory: ActiveDirectoryClient{
 			ApplicationsClient:      &legacyApplicationsClient,
-			GroupsClient:            &legacyGroupsClient,
 			ServicePrincipalsClient: &legacyServicePrincipalsClient,
 			UsersClient:             &legacyUsersClient,
 		},

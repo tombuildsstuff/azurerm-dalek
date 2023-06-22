@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/go-azure-sdk/sdk/odata"
 )
 
 func (d *Dalek) ActiveDirectory(ctx context.Context) error {
@@ -19,18 +21,13 @@ func (d *Dalek) ActiveDirectory(ctx context.Context) error {
 	}
 
 	log.Printf("[DEBUG] Preparing to delete Groups")
-	if err := d.deleteAADGroups(ctx); err != nil {
+	if err := d.deleteMicrosoftGraphGroups(ctx); err != nil {
 		return fmt.Errorf("deleting Groups: %+v", err)
 	}
 
 	log.Printf("[DEBUG] Preparing to delete Users")
 	if err := d.deleteAADUsers(ctx); err != nil {
 		return fmt.Errorf("deleting Users: %+v", err)
-	}
-
-	log.Printf("[DEBUG] Preparing to delete Management Groups")
-	if err := d.deleteManagementGroups(ctx); err != nil {
-		return fmt.Errorf("deleting Management Groups: %+v", err)
 	}
 
 	return nil
@@ -70,33 +67,36 @@ func (d *Dalek) deleteAADApplications(ctx context.Context) error {
 	return nil
 }
 
-func (d *Dalek) deleteAADGroups(ctx context.Context) error {
+func (d *Dalek) deleteMicrosoftGraphGroups(ctx context.Context) error {
 	if len(d.opts.Prefix) == 0 {
-		return fmt.Errorf("[ERROR] Not proceeding to delete AAD Groups for safety; prefix not specified")
+		return fmt.Errorf("[ERROR] Not proceeding to delete Microsoft Graph Groups for safety; prefix not specified")
 	}
 
-	client := d.client.ActiveDirectory.GroupsClient
-	groups, err := client.List(ctx, fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix))
+	client := d.client.MicrosoftGraph.Groups
+	listFilter := odata.Query{
+		Filter: fmt.Sprintf("startswith(displayName, '%s')", d.opts.Prefix),
+	}
+	groups, _, err := client.List(ctx, listFilter)
 	if err != nil {
-		return fmt.Errorf("[ERROR] Unable to list AAD Groups with prefix: %q", d.opts.Prefix)
+		return fmt.Errorf("[ERROR] Unable to list Microsoft Graph Groups with prefix: %q", d.opts.Prefix)
 	}
 
-	for _, group := range groups.Values() {
-		id := *group.ObjectID
+	for _, group := range *groups {
+		id := *group.ObjectId
 		displayName := *group.DisplayName
 
 		if strings.TrimPrefix(displayName, d.opts.Prefix) != displayName {
 			if !d.opts.ActuallyDelete {
-				log.Printf("[DEBUG]   Would have deleted AAD Group %q (ObjID: %s)", displayName, id)
+				log.Printf("[DEBUG] Would have deleted Microsoft Graph Group %q (ObjID: %s)", displayName, id)
 				continue
 			}
 
-			log.Printf("[DEBUG]   Deleting AAD Group %q (ObjectId: %s)...", displayName, id)
+			log.Printf("[DEBUG] Deleting Microsoft Graph Group %q (ObjectId: %s)...", displayName, id)
 			if _, err := client.Delete(ctx, id); err != nil {
-				log.Printf("[DEBUG]   Error during deletion of AAD Group %q (ObjID: %s): %s", displayName, id, err)
+				log.Printf("[DEBUG] Error during deletion of Microsoft Graph Group %q (ObjID: %s): %s", displayName, id, err)
 				continue
 			}
-			log.Printf("[DEBUG]   Deleted AAD Group %q (ObjID: %s)", displayName, id)
+			log.Printf("[DEBUG] Deleted Microsoft Graph Group %q (ObjID: %s)", displayName, id)
 		}
 	}
 
