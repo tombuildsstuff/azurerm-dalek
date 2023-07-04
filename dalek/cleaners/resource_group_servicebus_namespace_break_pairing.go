@@ -43,6 +43,10 @@ func (s serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id 
 		}
 
 		for _, config := range configs.Items {
+			if props := config.Properties; props == nil || *props.Role == disasterrecoveryconfigs.RoleDisasterRecoverySecondary {
+				log.Printf("[DEBUG] Skipping %s for %s: Role is %q", *config.Id, *namespace.Id, *props.Role)
+				continue
+			}
 			configId, err := disasterrecoveryconfigs.ParseDisasterRecoveryConfigIDInsensitively(*config.Id)
 			if err != nil {
 				return fmt.Errorf("parsing the Disaster Recovery Config ID %q: %+v", *config.Id, err)
