@@ -1,6 +1,6 @@
 module github.com/tombuildsstuff/azurerm-dalek
 
-go 1.19
+go 1.20
 
 require (
 	github.com/hashicorp/go-azure-helpers v0.57.0

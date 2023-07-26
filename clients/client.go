@@ -8,6 +8,11 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/certificateobjectlocalrulestack"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/fqdnlistlocalrulestack"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/localrules"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/localrulestacks"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/prefixlistlocalrulestack"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	servicebusV20220101Preview "github.com/hashicorp/go-azure-sdk/resource-manager/servicebus/2022-01-01-preview"
@@ -32,12 +37,17 @@ type MicrosoftGraphClient struct {
 }
 
 type ResourceManagerClient struct {
-	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
-	LocksClient                     *managementlocks.ManagementLocksClient
-	ManagementClient                *managementgroups.ManagementGroupsClient
-	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
-	ResourcesClient                 *resourcegroups.ResourceGroupsClient
-	ServiceBus                      *servicebusV20220101Preview.Client
+	MachineLearningWorkspacesClient          *workspaces.WorkspacesClient
+	LocksClient                              *managementlocks.ManagementLocksClient
+	ManagementClient                         *managementgroups.ManagementGroupsClient
+	ManagedHSMsClient                        *managedhsms.ManagedHsmsClient
+	ResourcesClient                          *resourcegroups.ResourceGroupsClient
+	ServiceBus                               *servicebusV20220101Preview.Client
+	PaloAltoLocalRulestackCertificatesClient *certificateobjectlocalrulestack.CertificateObjectLocalRulestackClient
+	PaloAltoLocalRulestackFQDNClient         *fqdnlistlocalrulestack.FqdnListLocalRulestackClient
+	PaloAltoLocalRulestackPrefixClient       *prefixlistlocalrulestack.PrefixListLocalRulestackClient
+	PaloAltoLocalRulestacksClient            *localrulestacks.LocalRulestacksClient
+	PaloAltoLocalRulestackRuleClient         *localrules.LocalRulesClient
 }
 
 type Credentials struct {
@@ -161,6 +171,21 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	managedHsmsClient := managedhsms.NewManagedHsmsClientWithBaseURI(*resourceManagerEndpoint)
 	managedHsmsClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
+	paloAltoLocalRulestackCertificatesClient, err := certificateobjectlocalrulestack.NewCertificateObjectLocalRulestackClientWithBaseURI(environment.ResourceManager)
+	paloAltoLocalRulestackCertificatesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	paloAltoLocalRulesClient, err := localrules.NewLocalRulesClientWithBaseURI(environment.ResourceManager)
+	paloAltoLocalRulesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	paloAltoLocalRulestacksClient, err := localrulestacks.NewLocalRulestacksClientWithBaseURI(environment.ResourceManager)
+	paloAltoLocalRulestacksClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	paloAltoLocalRulestackFQDNClient, err := fqdnlistlocalrulestack.NewFqdnListLocalRulestackClientWithBaseURI(environment.ResourceManager)
+	paloAltoLocalRulestackFQDNClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	paloAltoLocalRulestackPrefixClient, err := prefixlistlocalrulestack.NewPrefixListLocalRulestackClientWithBaseURI(environment.ResourceManager)
+	paloAltoLocalRulestackPrefixClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
 	resourcesClient := resourcegroups.NewResourceGroupsClientWithBaseURI(*resourceManagerEndpoint)
 	resourcesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
@@ -171,11 +196,16 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		return nil, fmt.Errorf("building ServiceBus Client: %+v", err)
 	}
 	return &ResourceManagerClient{
-		LocksClient:                     &locksClient,
-		MachineLearningWorkspacesClient: workspacesClient,
-		ManagementClient:                managementClient,
-		ManagedHSMsClient:               &managedHsmsClient,
-		ResourcesClient:                 &resourcesClient,
-		ServiceBus:                      serviceBusClient,
+		MachineLearningWorkspacesClient:          workspacesClient,
+		ResourcesClient:                          &resourcesClient,
+		ServiceBus:                               serviceBusClient,
+		LocksClient:                              &locksClient,
+		ManagementClient:                         managementClient,
+		ManagedHSMsClient:                        &managedHsmsClient,
+		PaloAltoLocalRulestackCertificatesClient: paloAltoLocalRulestackCertificatesClient,
+		PaloAltoLocalRulestacksClient:            paloAltoLocalRulestacksClient,
+		PaloAltoLocalRulestackRuleClient:         paloAltoLocalRulesClient,
+		PaloAltoLocalRulestackFQDNClient:         paloAltoLocalRulestackFQDNClient,
+		PaloAltoLocalRulestackPrefixClient:       paloAltoLocalRulestackPrefixClient,
 	}, nil
 }
