@@ -3,8 +3,8 @@ module github.com/tombuildsstuff/azurerm-dalek
 go 1.19
 
 require (
-	github.com/hashicorp/go-azure-helpers v0.56.0
-	github.com/hashicorp/go-azure-sdk v0.20230619.1075353
+	github.com/hashicorp/go-azure-helpers v0.57.0
+	github.com/hashicorp/go-azure-sdk v0.20230801.1155153
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/manicminer/hamilton v0.61.0
 )
