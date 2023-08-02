@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
@@ -31,11 +32,12 @@ type MicrosoftGraphClient struct {
 }
 
 type ResourceManagerClient struct {
-	LocksClient       *managementlocks.ManagementLocksClient
-	ManagementClient  *managementgroups.ManagementGroupsClient
-	ManagedHSMsClient *managedhsms.ManagedHsmsClient
-	ResourcesClient   *resourcegroups.ResourceGroupsClient
-	ServiceBus        *servicebusV20220101Preview.Client
+	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
+	LocksClient                     *managementlocks.ManagementLocksClient
+	ManagementClient                *managementgroups.ManagementGroupsClient
+	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
+	ResourcesClient                 *resourcegroups.ResourceGroupsClient
+	ServiceBus                      *servicebusV20220101Preview.Client
 }
 
 type Credentials struct {
@@ -147,6 +149,12 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	locksClient := managementlocks.NewManagementLocksClientWithBaseURI(*resourceManagerEndpoint)
 	locksClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
+	workspacesClient, err := workspaces.NewWorkspacesClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Machine Learning Workspaces Client: %+v", err)
+	}
+	workspacesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
 	managementClient, err := managementgroups.NewManagementGroupsClientWithBaseURI(environment.ResourceManager)
 	managementClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
@@ -163,10 +171,11 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		return nil, fmt.Errorf("building ServiceBus Client: %+v", err)
 	}
 	return &ResourceManagerClient{
-		LocksClient:       &locksClient,
-		ManagementClient:  managementClient,
-		ManagedHSMsClient: &managedHsmsClient,
-		ResourcesClient:   &resourcesClient,
-		ServiceBus:        serviceBusClient,
+		LocksClient:                     &locksClient,
+		MachineLearningWorkspacesClient: workspacesClient,
+		ManagementClient:                managementClient,
+		ManagedHSMsClient:               &managedHsmsClient,
+		ResourcesClient:                 &resourcesClient,
+		ServiceBus:                      serviceBusClient,
 	}, nil
 }
