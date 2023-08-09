@@ -12,6 +12,7 @@ var ResourceGroupCleaners = []ResourceGroupCleaner{
 	// would prevent us from doing anything else, so that needs to be first.
 	removeLocksFromResourceGroupCleaner{},
 	serviceBusNamespaceBreakPairingCleaner{},
+	paloAltoLocalRulestackCleaner{},
 }
 
 type ResourceGroupCleaner interface {
