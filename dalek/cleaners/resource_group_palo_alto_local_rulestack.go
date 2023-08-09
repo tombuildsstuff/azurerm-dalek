@@ -14,15 +14,15 @@ import (
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
 )
 
-type PaloAltoLocalRulestackCleaner struct{}
+type paloAltoLocalRulestackCleaner struct{}
 
-var _ ResourceGroupCleaner = PaloAltoLocalRulestackCleaner{}
+var _ ResourceGroupCleaner = paloAltoLocalRulestackCleaner{}
 
-func (p PaloAltoLocalRulestackCleaner) Name() string {
+func (p paloAltoLocalRulestackCleaner) Name() string {
 	return "Removing Rulestack Rules"
 }
 
-func (p PaloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient) error {
+func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient) error {
 	rulestacksClient := client.ResourceManager.PaloAltoLocalRulestacksClient
 
 	rulestacks, err := rulestacksClient.ListByResourceGroupComplete(ctx, id)
@@ -39,7 +39,7 @@ func (p PaloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 			return fmt.Errorf("listing rules for %s: %+v", id, err)
 		}
 		for _, v := range rulesInRulestack.Items {
-			if ruleId, err := localrules.ParseLocalRuleID(pointer.From(v.Id)); err != nil {
+			if ruleId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
 				if _, err := rulesClient.Delete(ctx, *ruleId); err != nil {
 					return fmt.Errorf("deleting rule %s from rulestack %s: %+v", ruleId, id, err)
 				}
@@ -56,7 +56,7 @@ func (p PaloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 			return fmt.Errorf("listing FQDNs for %s: %+v", id, err)
 		}
 		for _, v := range fqdnInRulestack.Items {
-			if fqdnId, err := localrules.ParseLocalRuleID(pointer.From(v.Id)); err != nil {
+			if fqdnId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
 				if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
 					return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
 				}
@@ -78,7 +78,8 @@ func (p PaloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 			sec.OutboundTrustCertificate = nil
 			sec.OutboundUnTrustCertificate = nil
 			rs.Model.Properties.SecurityServices = pointer.To(sec)
-			if err = rulestacksClient.CreateOrUpdateThenPoll(ctx, localrulestacks.LocalRulestackId(rulestackId), *rs.Model); err != nil {
+			localRulestackId := localrulestacks.NewLocalRulestackID(rulestackId.SubscriptionId, rulestackId.ResourceGroupName, rulestackId.LocalRulestackName)
+			if err = rulestacksClient.CreateOrUpdateThenPoll(ctx, localRulestackId, *rs.Model); err != nil {
 				return fmt.Errorf("removing certificate usage on %s: %+v", rulestackId, err)
 			}
 		}
@@ -88,7 +89,7 @@ func (p PaloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 			return fmt.Errorf("listing FQDNs for %s: %+v", id, err)
 		}
 		for _, v := range fqdnInRulestack.Items {
-			if fqdnId, err := localrules.ParseLocalRuleID(pointer.From(v.Id)); err != nil {
+			if fqdnId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
 				if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
 					return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
 				}
@@ -105,7 +106,7 @@ func (p PaloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 			return fmt.Errorf("listing FQDNs for %s: %+v", id, err)
 		}
 		for _, v := range prefixInRulestack.Items {
-			if prefixId, err := localrules.ParseLocalRuleID(pointer.From(v.Id)); err != nil {
+			if prefixId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
 				if _, err := rulesClient.Delete(ctx, *prefixId); err != nil {
 					return fmt.Errorf("deleting prefix %s from rulestack %s: %+v", prefixId, id, err)
 				}
