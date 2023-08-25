@@ -3,6 +3,7 @@ package cleaners
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/localrulestacks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/prefixlistlocalrulestack"
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
+	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
 
 type paloAltoLocalRulestackCleaner struct{}
@@ -22,7 +24,7 @@ func (p paloAltoLocalRulestackCleaner) Name() string {
 	return "Removing Rulestack Rules"
 }
 
-func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient) error {
+func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	rulestacksClient := client.ResourceManager.PaloAltoLocalRulestacksClient
 
 	rulestacks, err := rulestacksClient.ListByResourceGroupComplete(ctx, id)
@@ -39,11 +41,21 @@ func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 			return fmt.Errorf("listing rules for %s: %+v", id, err)
 		}
 		for _, v := range rulesInRulestack.Items {
-			if ruleId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
-				if _, err := rulesClient.Delete(ctx, *ruleId); err != nil {
-					return fmt.Errorf("deleting rule %s from rulestack %s: %+v", ruleId, id, err)
-				}
+			ruleId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id))
+			if err != nil {
+				return fmt.Errorf("parsing rule %s: %+v", pointer.From(v.Id), err)
 			}
+
+			if !opts.ActuallyDelete {
+				log.Printf("[DEBUG] Would have deleted the Local Rule for %s..", *ruleId)
+				continue
+			}
+
+			log.Printf("[DEBUG] Deleting %s..", *ruleId)
+			if _, err := rulesClient.Delete(ctx, *ruleId); err != nil {
+				return fmt.Errorf("deleting rule %s from rulestack %s: %+v", ruleId, id, err)
+			}
+			log.Printf("[DEBUG] Deleting %s..", *ruleId)
 		}
 	}
 
@@ -56,11 +68,21 @@ func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 			return fmt.Errorf("listing FQDNs for %s: %+v", id, err)
 		}
 		for _, v := range fqdnInRulestack.Items {
-			if fqdnId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
-				if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
-					return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
-				}
+			fqdnId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id))
+			if err != nil {
+				return fmt.Errorf("parsing %q as a local rule id: %+v", pointer.From(v.Id), err)
 			}
+
+			if !opts.ActuallyDelete {
+				log.Printf("[DEBUG] Would have deleted the Local Rule for %s..", *fqdnId)
+				continue
+			}
+
+			log.Printf("[DEBUG] Deleting %s..", *fqdnId)
+			if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
+				return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
+			}
+			log.Printf("[DEBUG] Deleted %s..", *fqdnId)
 		}
 	}
 

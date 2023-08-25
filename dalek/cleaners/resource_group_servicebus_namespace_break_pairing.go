@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/servicebus/2022-01-01-preview/disasterrecoveryconfigs"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/pollers"
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
+	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
 
 var _ ResourceGroupCleaner = serviceBusNamespaceBreakPairingCleaner{}
@@ -23,7 +24,7 @@ func (s serviceBusNamespaceBreakPairingCleaner) Name() string {
 	return "ServiceBus Namespace - Break Pairing"
 }
 
-func (s serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient) error {
+func (s serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	serviceBusClient := client.ResourceManager.ServiceBus
 	namespacesInResourceGroup, err := serviceBusClient.Namespaces.ListByResourceGroupComplete(ctx, id)
 	if err != nil {
@@ -51,6 +52,12 @@ func (s serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id 
 			if err != nil {
 				return fmt.Errorf("parsing the Disaster Recovery Config ID %q: %+v", *config.Id, err)
 			}
+
+			if !opts.ActuallyDelete {
+				log.Printf("[DEBUG] Would have broken the pairing for %s..", *configId)
+				continue
+			}
+
 			log.Printf("[DEBUG] Breaking Pairing for %s..", *configId)
 			if resp, err := serviceBusClient.DisasterRecoveryConfigs.BreakPairing(ctx, *configId); err != nil {
 				if !response.WasNotFound(resp.HttpResponse) {

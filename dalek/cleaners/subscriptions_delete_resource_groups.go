@@ -62,7 +62,7 @@ func (d deleteResourceGroupsInSubscriptionCleaner) Cleanup(ctx context.Context, 
 		// which are split out for simplicity since there's a number of them
 		for _, cleaner := range ResourceGroupCleaners {
 			log.Printf("[DEBUG] Running Resource Group Cleaner %q..", cleaner.Name())
-			if err := cleaner.Cleanup(ctx, id, client); err != nil {
+			if err := cleaner.Cleanup(ctx, id, client, opts); err != nil {
 				return fmt.Errorf("running Cleaner %q for %s: %+v", cleaner.Name(), id, err)
 			}
 		}

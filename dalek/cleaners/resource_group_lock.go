@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
+	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
 
 var _ ResourceGroupCleaner = removeLocksFromResourceGroupCleaner{}
@@ -18,7 +19,7 @@ func (r removeLocksFromResourceGroupCleaner) Name() string {
 	return "Removing Locks.."
 }
 
-func (r removeLocksFromResourceGroupCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient) error {
+func (r removeLocksFromResourceGroupCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	locks, err := client.ResourceManager.LocksClient.ListAtResourceGroupLevel(ctx, id, managementlocks.DefaultListAtResourceGroupLevelOperationOptions())
 	if err != nil {
 		log.Printf("[DEBUG] Error obtaining Resource Group Locks : %+v", err)
