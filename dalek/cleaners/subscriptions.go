@@ -12,6 +12,7 @@ var SubscriptionCleaners = []SubscriptionCleaner{
 	deleteResourceGroupsInSubscriptionCleaner{},
 	purgeSoftDeletedManagedHSMsInSubscriptionCleaner{},
 	purgeSoftDeletedMachineLearningWorkspacesInSubscriptionCleaner{},
+	newRelicCleaner{},
 }
 
 type SubscriptionCleaner interface {

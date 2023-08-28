@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/newrelic/2022-07-01/monitors"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/certificateobjectlocalrulestack"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/fqdnlistlocalrulestack"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/localrules"
@@ -41,6 +42,7 @@ type ResourceManagerClient struct {
 	LocksClient                              *managementlocks.ManagementLocksClient
 	ManagementClient                         *managementgroups.ManagementGroupsClient
 	ManagedHSMsClient                        *managedhsms.ManagedHsmsClient
+	NewRelicClient                           *monitors.MonitorsClient
 	ResourcesClient                          *resourcegroups.ResourceGroupsClient
 	ServiceBus                               *servicebusV20220101Preview.Client
 	PaloAltoLocalRulestackCertificatesClient *certificateobjectlocalrulestack.CertificateObjectLocalRulestackClient
@@ -171,6 +173,12 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	managedHsmsClient := managedhsms.NewManagedHsmsClientWithBaseURI(*resourceManagerEndpoint)
 	managedHsmsClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
+	newRelicClient, err := monitors.NewMonitorsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building New Relic Client: %+v", err)
+	}
+	newRelicClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
 	paloAltoLocalRulestackCertificatesClient, err := certificateobjectlocalrulestack.NewCertificateObjectLocalRulestackClientWithBaseURI(environment.ResourceManager)
 	paloAltoLocalRulestackCertificatesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
@@ -202,6 +210,7 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		LocksClient:                              &locksClient,
 		ManagementClient:                         managementClient,
 		ManagedHSMsClient:                        &managedHsmsClient,
+		NewRelicClient:                           newRelicClient,
 		PaloAltoLocalRulestackCertificatesClient: paloAltoLocalRulestackCertificatesClient,
 		PaloAltoLocalRulestacksClient:            paloAltoLocalRulestacksClient,
 		PaloAltoLocalRulestackRuleClient:         paloAltoLocalRulesClient,
