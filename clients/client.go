@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces"
 	paloAltoNetworks "github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
@@ -41,6 +42,7 @@ type ResourceManagerClient struct {
 	LocksClient                     *managementlocks.ManagementLocksClient
 	ManagementClient                *managementgroups.ManagementGroupsClient
 	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
+	NotificationHubNamespaceClient  *namespaces.NamespacesClient
 	PaloAlto                        *paloAltoNetworks.Client
 	ResourcesClient                 *resourcegroups.ResourceGroupsClient
 	ServiceBus                      *serviceBus.Client
@@ -179,6 +181,12 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	}
 	managedHsmsClient.Client.Authorizer = resourceManagerAuthorizer
 
+	notificationHubNamespacesClient, err := namespaces.NewNamespacesClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Notification Hub Namespaces Client: %+v", err)
+	}
+	notificationHubNamespacesClient.Client.Authorizer = resourceManagerAuthorizer
+
 	paloAltoClient, err := paloAltoNetworks.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = resourceManagerAuthorizer
 	})
@@ -221,6 +229,7 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		LocksClient:                     locksClient,
 		ManagementClient:                managementClient,
 		ManagedHSMsClient:               managedHsmsClient,
+		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
 		PaloAlto:                        paloAltoClient,
 		StorageSyncClient:               storageSyncClient,
 		StorageSyncGroupClient:          storageSyncGroupClient,

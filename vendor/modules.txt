@@ -48,6 +48,7 @@ github.com/hashicorp/go-azure-sdk/resource-manager/dataprotection/2023-05-01/res
 github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms
 github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces
 github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups
+github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces
 github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29
 github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/certificateobjectglobalrulestack
 github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/certificateobjectlocalrulestack
