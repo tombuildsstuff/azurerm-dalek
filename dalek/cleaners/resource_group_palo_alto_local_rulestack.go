@@ -25,7 +25,7 @@ func (p paloAltoLocalRulestackCleaner) Name() string {
 }
 
 func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
-	rulestacksClient := client.ResourceManager.PaloAltoLocalRulestacksClient
+	rulestacksClient := client.ResourceManager.PaloAlto.LocalRulestacks
 
 	rulestacks, err := rulestacksClient.ListByResourceGroupComplete(ctx, id)
 	if err != nil {
@@ -33,7 +33,7 @@ func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 	}
 
 	// Rules
-	rulesClient := client.ResourceManager.PaloAltoLocalRulestackRuleClient
+	rulesClient := client.ResourceManager.PaloAlto.LocalRules
 	for _, rg := range rulestacks.Items {
 		rulestackId := localrules.NewLocalRulestackID(id.SubscriptionId, id.ResourceGroupName, pointer.From(rg.Name))
 		rulesInRulestack, err := rulesClient.ListByLocalRulestacksComplete(ctx, rulestackId)
@@ -60,7 +60,7 @@ func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 	}
 
 	// FQDN Lists
-	fqdnClient := client.ResourceManager.PaloAltoLocalRulestackFQDNClient
+	fqdnClient := client.ResourceManager.PaloAlto.FqdnListLocalRulestack
 	for _, rg := range rulestacks.Items {
 		rulestackId := fqdnlistlocalrulestack.NewLocalRulestackID(id.SubscriptionId, id.ResourceGroupName, pointer.From(rg.Name))
 		fqdnInRulestack, err := fqdnClient.ListByLocalRulestacksComplete(ctx, rulestackId)
@@ -87,7 +87,7 @@ func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 	}
 
 	// Certificates
-	certClient := client.ResourceManager.PaloAltoLocalRulestackCertificatesClient
+	certClient := client.ResourceManager.PaloAlto.CertificateObjectLocalRulestack
 	for _, rg := range rulestacks.Items {
 		// Remove inspection config - blocks removal of certs if referenced
 		rulestackId := certificateobjectlocalrulestack.NewLocalRulestackID(id.SubscriptionId, id.ResourceGroupName, pointer.From(rg.Name))
@@ -120,7 +120,7 @@ func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 	}
 
 	// Prefixes
-	prefixClient := client.ResourceManager.PaloAltoLocalRulestackPrefixClient
+	prefixClient := client.ResourceManager.PaloAlto.PrefixListLocalRulestack
 	for _, rg := range rulestacks.Items {
 		rulestackId := prefixlistlocalrulestack.NewLocalRulestackID(id.SubscriptionId, id.ResourceGroupName, pointer.From(rg.Name))
 		prefixInRulestack, err := prefixClient.ListByLocalRulestacksComplete(ctx, rulestackId)

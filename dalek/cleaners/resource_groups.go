@@ -12,6 +12,7 @@ var ResourceGroupCleaners = []ResourceGroupCleaner{
 	// NOTE: the ordering is important here, we want to remove Locks first because a Write or Delete lock
 	// would prevent us from doing anything else, so that needs to be first.
 	removeLocksFromResourceGroupCleaner{},
+	removeDataProtectionFromResourceGroupCleaner{},
 	serviceBusNamespaceBreakPairingCleaner{},
 	paloAltoLocalRulestackCleaner{},
 }

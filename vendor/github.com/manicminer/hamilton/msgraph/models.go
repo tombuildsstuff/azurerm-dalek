@@ -259,7 +259,7 @@ type Application struct {
 	KeyCredentials                *[]KeyCredential          `json:"keyCredentials,omitempty"`
 	Oauth2RequirePostResponse     *bool                     `json:"oauth2RequirePostResponse,omitempty"` // field name has typo in beta API
 	Oauth2RequiredPostResponse    *bool                     `json:"oauth2RequiredPostResponse,omitempty"`
-	OnPremisesPublishing          *OnPremisesPublishing     `json:"onPremisePublishing,omitempty"`
+	OnPremisesPublishing          *OnPremisesPublishing     `json:"onPremisesPublishing,omitempty"`
 	OptionalClaims                *OptionalClaims           `json:"optionalClaims,omitempty"`
 	Notes                         *StringNullWhenEmpty      `json:"notes,omitempty"`
 	ParentalControlSettings       *ParentalControlSettings  `json:"parentalControlSettings,omitempty"`
@@ -565,7 +565,7 @@ type ApprovalStage struct {
 
 type AssignmentReviewSettings struct {
 	IsEnabled                       *bool                           `json:"isEnabled,omitempty"`
-	RecurrenceType                  AccessReviewRecurranceType      `json:"recurrenceType,omitempty"`
+	RecurrenceType                  AccessReviewRecurrenceType      `json:"recurrenceType,omitempty"`
 	ReviewerType                    AccessReviewReviewerType        `json:"reviewerType,omitempty"`
 	StartDateTime                   *time.Time                      `json:"startDateTime,omitempty"`
 	DurationInDays                  *int32                          `json:"durationInDays,omitempty"`
@@ -581,6 +581,16 @@ type AuditActivityInitiator struct {
 }
 
 type AuthenticationMethod interface{}
+
+type AuthenticationStrengthPolicy struct {
+	AllowedCombinations *[]AuthenticationMethodModes      `json:"allowedCombinations,omitempty"`
+	CreatedDateTime     *time.Time                        `json:"createdDateTime,omitempty"`
+	ID                  *string                           `json:"id,omitempty"`
+	ModifiedDateTime    *time.Time                        `json:"modifiedDateTime,omitempty"`
+	PolicyType          *AuthenticationStrengthPolicyType `json:"policyType,omitempty"`
+	Description         *string                           `json:"description,omitempty"`
+	DisplayName         *string                           `json:"displayName,omitempty"`
+}
 
 type BaseNamedLocation struct {
 	ODataType        *odata.Type `json:"@odata.type,omitempty"`
@@ -615,16 +625,17 @@ type ConditionalAccessClientApplications struct {
 }
 
 type ConditionalAccessConditionSet struct {
-	Applications       *ConditionalAccessApplications       `json:"applications,omitempty"`
-	ClientApplications *ConditionalAccessClientApplications `json:"clientApplications,omitempty"`
-	ClientAppTypes     *[]ConditionalAccessClientAppType    `json:"clientAppTypes,omitempty"`
-	Devices            *ConditionalAccessDevices            `json:"devices,omitempty"`
-	DeviceStates       *ConditionalAccessDeviceStates       `json:"deviceStates,omitempty"`
-	Locations          *ConditionalAccessLocations          `json:"locations"`
-	Platforms          *ConditionalAccessPlatforms          `json:"platforms"`
-	SignInRiskLevels   *[]ConditionalAccessRiskLevel        `json:"signInRiskLevels,omitempty"`
-	UserRiskLevels     *[]ConditionalAccessRiskLevel        `json:"userRiskLevels,omitempty"`
-	Users              *ConditionalAccessUsers              `json:"users,omitempty"`
+	Applications               *ConditionalAccessApplications       `json:"applications,omitempty"`
+	ClientApplications         *ConditionalAccessClientApplications `json:"clientApplications,omitempty"`
+	ClientAppTypes             *[]ConditionalAccessClientAppType    `json:"clientAppTypes,omitempty"`
+	Devices                    *ConditionalAccessDevices            `json:"devices,omitempty"`
+	DeviceStates               *ConditionalAccessDeviceStates       `json:"deviceStates,omitempty"`
+	Locations                  *ConditionalAccessLocations          `json:"locations"`
+	Platforms                  *ConditionalAccessPlatforms          `json:"platforms"`
+	ServicePrincipalRiskLevels *[]ConditionalAccessRiskLevel        `json:"servicePrincipalRiskLevels,omitempty"`
+	SignInRiskLevels           *[]ConditionalAccessRiskLevel        `json:"signInRiskLevels,omitempty"`
+	UserRiskLevels             *[]ConditionalAccessRiskLevel        `json:"userRiskLevels,omitempty"`
+	Users                      *ConditionalAccessUsers              `json:"users,omitempty"`
 }
 
 type ConditionalAccessDevices struct {
@@ -645,6 +656,7 @@ type ConditionalAccessFilter struct {
 
 type ConditionalAccessGrantControls struct {
 	Operator                    *string                          `json:"operator,omitempty"`
+	AuthenticationStrength      *AuthenticationStrengthPolicy    `json:"authenticationStrength,omitempty"`
 	BuiltInControls             *[]ConditionalAccessGrantControl `json:"builtInControls,omitempty"`
 	CustomAuthenticationFactors *[]string                        `json:"customAuthenticationFactors,omitempty"`
 	TermsOfUse                  *[]string                        `json:"termsOfUse,omitempty"`
@@ -665,10 +677,10 @@ type ConditionalAccessPolicy struct {
 	Conditions       *ConditionalAccessConditionSet    `json:"conditions,omitempty"`
 	CreatedDateTime  *time.Time                        `json:"createdDateTime,omitempty"`
 	DisplayName      *string                           `json:"displayName,omitempty"`
-	GrantControls    *ConditionalAccessGrantControls   `json:"grantControls,omitempty"`
+	GrantControls    *ConditionalAccessGrantControls   `json:"grantControls"`
 	ID               *string                           `json:"id,omitempty"`
 	ModifiedDateTime *time.Time                        `json:"modifiedDateTime,omitempty"`
-	SessionControls  *ConditionalAccessSessionControls `json:"sessionControls,omitempty"`
+	SessionControls  *ConditionalAccessSessionControls `json:"sessionControls"`
 	State            *ConditionalAccessPolicyState     `json:"state,omitempty"`
 }
 
@@ -1383,6 +1395,11 @@ type SamlSingleSignOnSettings struct {
 	RelayState *string `json:"relayState,omitempty"`
 }
 
+type RequestSchedule struct {
+	StartDateTime *time.Time         `json:"startDateTime,omitempty"`
+	Expiration    *ExpirationPattern `json:"expiration,omitempty"`
+}
+
 type SchemaExtension struct {
 	ID          *string                      `json:"id,omitempty"`
 	Description *string                      `json:"description,omitempty"`
@@ -1658,6 +1675,11 @@ type TemporaryAccessPassAuthenticationMethod struct {
 	MethodUsabilityReason *MethodUsabilityReason `json:"methodUsabilityReason,omitempty"`
 }
 
+type TicketInfo struct {
+	TicketNumber *string `json:"ticketNumber,omitempty"`
+	TicketSystem *string `json:"ticketSystem,omitempty"`
+}
+
 type TokenIssuancePolicy struct {
 	DirectoryObject
 	Definition            *[]string `json:"definition,omitempty"`
@@ -1686,6 +1708,24 @@ type UnifiedRoleDefinition struct {
 	RolePermissions *[]UnifiedRolePermission `json:"rolePermissions,omitempty"`
 	TemplateId      *string                  `json:"templateId,omitempty"`
 	Version         *string                  `json:"version,omitempty"`
+}
+
+type UnifiedRoleEligibilityScheduleRequest struct {
+	ID                *string                           `json:"id,omitempty"`
+	Action            *UnifiedRoleScheduleRequestAction `json:"action,omitempty"`
+	AppScopeID        *string                           `json:"appScopeId,omitempty"`
+	ApprovalID        *string                           `json:"approvalId,omitempty"`
+	CompletedDateTime *time.Time                        `json:"completedDateTime,omitempty"`
+	CreatedDateTime   *time.Time                        `json:"createdDateTime,omitempty"`
+	DirectoryScopeId  *string                           `json:"directoryScopeId,omitempty"`
+	IsValidationOnly  *bool                             `json:"isValidationOnly,omitempty"`
+	Justification     *string                           `json:"justification,omitempty"`
+	PrincipalId       *string                           `json:"principalId,omitempty"`
+	RoleDefinitionId  *string                           `json:"roleDefinitionId,omitempty"`
+	ScheduleInfo      *RequestSchedule                  `json:"scheduleInfo,omitempty"`
+	Status            *string                           `json:"status,omitempty"`
+	TargetScheduleID  *string                           `json:"targetScheduleId,omitempty"`
+	TicketInfo        *TicketInfo                       `json:"ticketInfo,omitempty"`
 }
 
 type UnifiedRolePermission struct {
