@@ -23,4 +23,7 @@ type ResourceGroupCleaner interface {
 
 	// Cleanup performs the cleanup operation for this ResourceGroupCleaner
 	Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error
+
+	// ResourceTypes returns the list of Resource Types supported by this ResourceGroupCleaner
+	ResourceTypes() []string
 }

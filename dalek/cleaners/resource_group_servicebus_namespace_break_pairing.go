@@ -20,11 +20,11 @@ var _ ResourceGroupCleaner = serviceBusNamespaceBreakPairingCleaner{}
 type serviceBusNamespaceBreakPairingCleaner struct {
 }
 
-func (s serviceBusNamespaceBreakPairingCleaner) Name() string {
+func (serviceBusNamespaceBreakPairingCleaner) Name() string {
 	return "ServiceBus Namespace - Break Pairing"
 }
 
-func (s serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
+func (serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	serviceBusClient := client.ResourceManager.ServiceBus
 	namespacesInResourceGroup, err := serviceBusClient.Namespaces.ListByResourceGroupComplete(ctx, id)
 	if err != nil {
@@ -77,6 +77,12 @@ func (s serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id 
 		}
 	}
 	return nil
+}
+
+func (serviceBusNamespaceBreakPairingCleaner) ResourceTypes() []string {
+	return []string{
+		"Microsoft.ServiceBus/namespaces",
+	}
 }
 
 type serviceBusNamespaceBreakPairingPoller struct {
