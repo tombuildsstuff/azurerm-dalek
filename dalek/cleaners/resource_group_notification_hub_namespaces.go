@@ -10,23 +10,24 @@ import (
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
 	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 	"log"
+	"strings"
 )
 
 type notificationHubNamespacesCleaner struct{}
 
-var _ SubscriptionCleaner = notificationHubNamespacesCleaner{}
+var _ ResourceGroupCleaner = notificationHubNamespacesCleaner{}
 
 func (c notificationHubNamespacesCleaner) Name() string {
 	return "Notification Hub Namespaces"
 }
 
-func (c notificationHubNamespacesCleaner) Cleanup(ctx context.Context, subscriptionId commonids.SubscriptionId, client *clients.AzureClient, opts options.Options) error {
+func (c notificationHubNamespacesCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	// Notification Hub Namespaces don't clean up cleanly when deleting the Resource Group, so let's remove these
 
-	log.Printf("[DEBUG] Retrieving Notification Hub Namespaces in %s..", subscriptionId)
-	namespaceIds, err := c.findNamespacesIDsInSubscription(ctx, subscriptionId, client)
+	log.Printf("[DEBUG] Retrieving Notification Hub Namespaces in %s..", id)
+	namespaceIds, err := c.findNamespacesIDs(ctx, id, client)
 	if err != nil {
-		return fmt.Errorf("finding the Namespace IDs within %s: %+v", subscriptionId, err)
+		return fmt.Errorf("finding the Namespace IDs within %s: %+v", id, err)
 	}
 
 	for _, namespaceId := range *namespaceIds {
@@ -45,15 +46,27 @@ func (c notificationHubNamespacesCleaner) Cleanup(ctx context.Context, subscript
 	return nil
 }
 
-func (c notificationHubNamespacesCleaner) findNamespacesIDsInSubscription(ctx context.Context, subscriptionId commonids.SubscriptionId, client *clients.AzureClient) (*[]namespaces.NamespaceId, error) {
-	query := `resources | where type =~ "Microsoft.NotificationHubs/namespaces" | project id | sort by (tolower(tostring(id))) asc`
+func (c notificationHubNamespacesCleaner) ResourceTypes() []string {
+	return []string{
+		"Microsoft.NotificationHubs/namespaces",
+	}
+}
+
+func (c notificationHubNamespacesCleaner) findNamespacesIDs(ctx context.Context, resourceGroupId commonids.ResourceGroupId, client *clients.AzureClient) (*[]namespaces.NamespaceId, error) {
+	query := strings.TrimSpace(fmt.Sprintf(`
+resources
+| where type =~ "Microsoft.NotificationHubs/namespaces"
+| where resourceGroup =~ '%s'
+| project id
+| sort by (tolower(tostring(id))) asc
+`, resourceGroupId.ResourceGroupName))
 	payload := resources.QueryRequest{
 		Options: &resources.QueryRequestOptions{
 			Top: pointer.To(int64(1000)),
 		},
 		Query: query,
 		Subscriptions: &[]string{
-			subscriptionId.SubscriptionId,
+			resourceGroupId.SubscriptionId,
 		},
 	}
 	resp, err := client.ResourceManager.ResourceGraphClient.Resources(ctx, payload)
@@ -91,4 +104,5 @@ func (c notificationHubNamespacesCleaner) findNamespacesIDsInSubscription(ctx co
 	}
 
 	return &namespaceIds, nil
+
 }

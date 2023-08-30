@@ -21,11 +21,11 @@ type paloAltoLocalRulestackCleaner struct{}
 
 var _ ResourceGroupCleaner = paloAltoLocalRulestackCleaner{}
 
-func (p paloAltoLocalRulestackCleaner) Name() string {
+func (paloAltoLocalRulestackCleaner) Name() string {
 	return "Removing Rulestack Rules"
 }
 
-func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
+func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	rulestacksClient := client.ResourceManager.PaloAlto.LocalRulestacks
 
 	rulestacks, err := rulestacksClient.ListByResourceGroupComplete(ctx, id)
@@ -158,4 +158,21 @@ func (p paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids
 	}
 
 	return nil
+}
+
+func (paloAltoLocalRulestackCleaner) ResourceTypes() []string {
+	return []string{
+		"PaloAltoNetworks.Cloudngfw/firewalls",
+		"PaloAltoNetworks.Cloudngfw/localRulestacks",
+		"PaloAltoNetworks.Cloudngfw/localRulestacks/certificates",
+		"PaloAltoNetworks.Cloudngfw/localRulestacks/fqdnLists",
+		"PaloAltoNetworks.Cloudngfw/localRulestacks/localRules",
+		"PaloAltoNetworks.Cloudngfw/localRulestacks/prefixLists",
+		"PaloAltoNetworks.Cloudngfw/globalRulestacks",
+		"PaloAltoNetworks.Cloudngfw/globalRulestacks/certificates",
+		"PaloAltoNetworks.Cloudngfw/globalRulestacks/fqdnLists",
+		"PaloAltoNetworks.Cloudngfw/globalRulestacks/postRules",
+		"PaloAltoNetworks.Cloudngfw/globalRulestacks/preRules",
+		"PaloAltoNetworks.Cloudngfw/globalRulestacks/prefixLists",
+	}
 }

@@ -15,11 +15,11 @@ var _ ResourceGroupCleaner = removeLocksFromResourceGroupCleaner{}
 type removeLocksFromResourceGroupCleaner struct {
 }
 
-func (r removeLocksFromResourceGroupCleaner) Name() string {
+func (removeLocksFromResourceGroupCleaner) Name() string {
 	return "Removing Locks.."
 }
 
-func (r removeLocksFromResourceGroupCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
+func (removeLocksFromResourceGroupCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	locks, err := client.ResourceManager.LocksClient.ListAtResourceGroupLevel(ctx, id, managementlocks.DefaultListAtResourceGroupLevelOperationOptions())
 	if err != nil {
 		log.Printf("[DEBUG] Error obtaining Resource Group Locks : %+v", err)
@@ -50,4 +50,10 @@ func (r removeLocksFromResourceGroupCleaner) Cleanup(ctx context.Context, id com
 		}
 	}
 	return nil
+}
+
+func (removeLocksFromResourceGroupCleaner) ResourceTypes() []string {
+	return []string{
+		"Microsoft.Authorization/locks",
+	}
 }

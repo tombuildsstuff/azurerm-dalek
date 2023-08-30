@@ -83,3 +83,9 @@ func (removeDataProtectionFromResourceGroupCleaner) Cleanup(ctx context.Context,
 
 	return nil
 }
+
+func (removeDataProtectionFromResourceGroupCleaner) ResourceTypes() []string {
+	return []string{
+		"Microsoft.DataProtection/backupVaults",
+	}
+}
