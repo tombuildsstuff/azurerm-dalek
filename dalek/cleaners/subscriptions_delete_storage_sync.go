@@ -3,6 +3,7 @@ package cleaners
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storagesync/2020-03-01/cloudendpointresource"
@@ -43,6 +44,10 @@ func (p deleteStorageSyncSubscriptionCleaner) Cleanup(ctx context.Context, subsc
 		if err != nil {
 			return err
 		}
+		if !opts.ActuallyDelete {
+			log.Printf("[DEBUG] Would have deleted %s..", storageSyncForGroupId)
+			continue
+		}
 
 		groupList, err := storageSyncGroupClient.SyncGroupsListByStorageSyncService(ctx, *storageSyncForGroupId)
 		if err != nil {
@@ -63,6 +68,11 @@ func (p deleteStorageSyncSubscriptionCleaner) Cleanup(ctx context.Context, subsc
 				return err
 			}
 
+			if !opts.ActuallyDelete {
+				log.Printf("[DEBUG] Would have deleted %s..", groupIdForCloudEndpoint)
+				continue
+			}
+
 			cloudEndpointList, err := storageSyncCloudEndpointClient.CloudEndpointsListBySyncGroup(ctx, *groupIdForCloudEndpoint)
 			if err != nil {
 				return fmt.Errorf("listing cloud endpoints for %s: %+v", groupIdForCloudEndpoint, err)
@@ -80,6 +90,11 @@ func (p deleteStorageSyncSubscriptionCleaner) Cleanup(ctx context.Context, subsc
 				endpointId, err := cloudendpointresource.ParseCloudEndpointID(*endpoint.Id)
 				if err != nil {
 					return err
+				}
+
+				if !opts.ActuallyDelete {
+					log.Printf("[DEBUG] Would have deleted %s..", endpointId)
+					continue
 				}
 
 				if err = storageSyncCloudEndpointClient.CloudEndpointsDeleteThenPoll(ctx, *endpointId); err != nil {
