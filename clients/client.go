@@ -38,13 +38,13 @@ type MicrosoftGraphClient struct {
 
 type ResourceManagerClient struct {
 	DataProtection                  *dataProtection.Client
-	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
 	LocksClient                     *managementlocks.ManagementLocksClient
-	ManagementClient                *managementgroups.ManagementGroupsClient
+	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
 	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
+	ManagementClient                *managementgroups.ManagementGroupsClient
 	NotificationHubNamespaceClient  *namespaces.NamespacesClient
 	PaloAlto                        *paloAltoNetworks.Client
-	ResourcesClient                 *resourcegroups.ResourceGroupsClient
+	ResourcesGroupsClient           *resourcegroups.ResourceGroupsClient
 	ServiceBus                      *serviceBus.Client
 	StorageSyncClient               *storagesyncservicesresource.StorageSyncServicesResourceClient
 	StorageSyncGroupClient          *syncgroupresource.SyncGroupResourceClient
@@ -223,14 +223,14 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 
 	return &ResourceManagerClient{
 		DataProtection:                  dataProtectionClient,
-		MachineLearningWorkspacesClient: workspacesClient,
-		ResourcesClient:                 resourcesClient,
-		ServiceBus:                      serviceBusClient,
 		LocksClient:                     locksClient,
-		ManagementClient:                managementClient,
+		MachineLearningWorkspacesClient: workspacesClient,
 		ManagedHSMsClient:               managedHsmsClient,
+		ManagementClient:                managementClient,
 		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
 		PaloAlto:                        paloAltoClient,
+		ResourcesGroupsClient:           resourcesClient,
+		ServiceBus:                      serviceBusClient,
 		StorageSyncClient:               storageSyncClient,
 		StorageSyncGroupClient:          storageSyncGroupClient,
 		StorageSyncCloudEndpointClient:  storageSyncCloudEndpointClient,
