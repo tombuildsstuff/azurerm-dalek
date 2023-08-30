@@ -16,6 +16,9 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	servicebusV20220101Preview "github.com/hashicorp/go-azure-sdk/resource-manager/servicebus/2022-01-01-preview"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/storagesync/2020-03-01/cloudendpointresource"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/storagesync/2020-03-01/storagesyncservicesresource"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/storagesync/2020-03-01/syncgroupresource"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
@@ -43,6 +46,9 @@ type ResourceManagerClient struct {
 	ManagedHSMsClient                        *managedhsms.ManagedHsmsClient
 	ResourcesClient                          *resourcegroups.ResourceGroupsClient
 	ServiceBus                               *servicebusV20220101Preview.Client
+	StorageSyncClient                        *storagesyncservicesresource.StorageSyncServicesResourceClient
+	StorageSyncGroupClient                   *syncgroupresource.SyncGroupResourceClient
+	StorageSyncCloudEndpointClient           *cloudendpointresource.CloudEndpointResourceClient
 	PaloAltoLocalRulestackCertificatesClient *certificateobjectlocalrulestack.CertificateObjectLocalRulestackClient
 	PaloAltoLocalRulestackFQDNClient         *fqdnlistlocalrulestack.FqdnListLocalRulestackClient
 	PaloAltoLocalRulestackPrefixClient       *prefixlistlocalrulestack.PrefixListLocalRulestackClient
@@ -195,6 +201,25 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	if err != nil {
 		return nil, fmt.Errorf("building ServiceBus Client: %+v", err)
 	}
+
+	storageSyncClient, err := storagesyncservicesresource.NewStorageSyncServicesResourceClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building StorageSync Client: %+v", err)
+	}
+	storageSyncClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	storageSyncGroupClient, err := syncgroupresource.NewSyncGroupResourceClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building StorageSyncGroup Client: %+v", err)
+	}
+	storageSyncGroupClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	storageSyncCloudEndpointClient, err := cloudendpointresource.NewCloudEndpointResourceClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building StorageSyncCloudEndpoint Client: %+v", err)
+	}
+	storageSyncCloudEndpointClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
+
 	return &ResourceManagerClient{
 		MachineLearningWorkspacesClient:          workspacesClient,
 		ResourcesClient:                          &resourcesClient,
@@ -207,5 +232,8 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		PaloAltoLocalRulestackRuleClient:         paloAltoLocalRulesClient,
 		PaloAltoLocalRulestackFQDNClient:         paloAltoLocalRulestackFQDNClient,
 		PaloAltoLocalRulestackPrefixClient:       paloAltoLocalRulestackPrefixClient,
+		StorageSyncClient:                        storageSyncClient,
+		StorageSyncGroupClient:                   storageSyncGroupClient,
+		StorageSyncCloudEndpointClient:           storageSyncCloudEndpointClient,
 	}, nil
 }
