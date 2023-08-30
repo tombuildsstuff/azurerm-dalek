@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces"
 	paloAltoNetworks "github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-04-01/backupprotectioncontainers"
 	resourceGraph "github.com/hashicorp/go-azure-sdk/resource-manager/resourcegraph/2022-10-01/resources"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storagesync/2020-03-01/storagesyncservicesresource"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storagesync/2020-03-01/syncgroupresource"
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
+	autorestWrapper "github.com/hashicorp/go-azure-sdk/sdk/auth/autorest"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 	"github.com/manicminer/hamilton/msgraph"
@@ -38,19 +40,20 @@ type MicrosoftGraphClient struct {
 }
 
 type ResourceManagerClient struct {
-	DataProtection                  *dataProtection.Client
-	LocksClient                     *managementlocks.ManagementLocksClient
-	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
-	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
-	ManagementClient                *managementgroups.ManagementGroupsClient
-	NotificationHubNamespaceClient  *namespaces.NamespacesClient
-	PaloAlto                        *paloAltoNetworks.Client
-	ResourceGraphClient             *resourceGraph.ResourcesClient
-	ResourcesGroupsClient           *resourcegroups.ResourceGroupsClient
-	ServiceBus                      *serviceBus.Client
-	StorageSyncClient               *storagesyncservicesresource.StorageSyncServicesResourceClient
-	StorageSyncGroupClient          *syncgroupresource.SyncGroupResourceClient
-	StorageSyncCloudEndpointClient  *cloudendpointresource.CloudEndpointResourceClient
+	DataProtection                                   *dataProtection.Client
+	LocksClient                                      *managementlocks.ManagementLocksClient
+	MachineLearningWorkspacesClient                  *workspaces.WorkspacesClient
+	ManagedHSMsClient                                *managedhsms.ManagedHsmsClient
+	ManagementClient                                 *managementgroups.ManagementGroupsClient
+	NotificationHubNamespaceClient                   *namespaces.NamespacesClient
+	PaloAlto                                         *paloAltoNetworks.Client
+	RecoveryServicesBackupProtectionContainersClient *backupprotectioncontainers.BackupProtectionContainersClient
+	ResourceGraphClient                              *resourceGraph.ResourcesClient
+	ResourcesGroupsClient                            *resourcegroups.ResourceGroupsClient
+	ServiceBus                                       *serviceBus.Client
+	StorageSyncClient                                *storagesyncservicesresource.StorageSyncServicesResourceClient
+	StorageSyncGroupClient                           *syncgroupresource.SyncGroupResourceClient
+	StorageSyncCloudEndpointClient                   *cloudendpointresource.CloudEndpointResourceClient
 }
 
 type Credentials struct {
@@ -230,6 +233,15 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	}
 	storageSyncCloudEndpointClient.Client.Authorizer = resourceManagerAuthorizer
 
+	// NOTE: legacy AutoRest SDKs below this point
+	resourceManagerEndpoint, ok := environment.ResourceManager.Endpoint()
+	if !ok {
+		return nil, fmt.Errorf("missing Resource Manager endpoint")
+	}
+
+	backupProtectionContainersClient := backupprotectioncontainers.NewBackupProtectionContainersClientWithBaseURI(*resourceManagerEndpoint)
+	backupProtectionContainersClient.Client.Authorizer = autorestWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+
 	return &ResourceManagerClient{
 		DataProtection:                  dataProtectionClient,
 		LocksClient:                     locksClient,
@@ -238,11 +250,12 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		ManagementClient:                managementClient,
 		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
 		PaloAlto:                        paloAltoClient,
-		ResourceGraphClient:             resourceGraphClient,
-		ResourcesGroupsClient:           resourcesClient,
-		ServiceBus:                      serviceBusClient,
-		StorageSyncClient:               storageSyncClient,
-		StorageSyncGroupClient:          storageSyncGroupClient,
-		StorageSyncCloudEndpointClient:  storageSyncCloudEndpointClient,
+		RecoveryServicesBackupProtectionContainersClient: &backupProtectionContainersClient,
+		ResourceGraphClient:            resourceGraphClient,
+		ResourcesGroupsClient:          resourcesClient,
+		ServiceBus:                     serviceBusClient,
+		StorageSyncClient:              storageSyncClient,
+		StorageSyncGroupClient:         storageSyncGroupClient,
+		StorageSyncCloudEndpointClient: storageSyncCloudEndpointClient,
 	}, nil
 }

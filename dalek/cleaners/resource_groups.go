@@ -15,6 +15,7 @@ var ResourceGroupCleaners = []ResourceGroupCleaner{
 	removeDataProtectionFromResourceGroupCleaner{},
 	notificationHubNamespacesCleaner{},
 	paloAltoLocalRulestackCleaner{},
+	recoveryServicesResourceGroupCleaner{},
 	serviceBusNamespaceBreakPairingCleaner{},
 }
 
