@@ -29,7 +29,7 @@ func (d deleteResourceGroupsInSubscriptionCleaner) Cleanup(ctx context.Context, 
 	listOpts := resourcegroups.ListOperationOptions{
 		Top: pointer.To(opts.NumberOfResourceGroupsToDelete),
 	}
-	groups, err := client.ResourceManager.ResourcesClient.List(ctx, subscriptionId, listOpts)
+	groups, err := client.ResourceManager.ResourcesGroupsClient.List(ctx, subscriptionId, listOpts)
 	if err != nil {
 		return fmt.Errorf("listing Resource Groups: %+v", err)
 	}
@@ -75,7 +75,7 @@ func (d deleteResourceGroupsInSubscriptionCleaner) Cleanup(ctx context.Context, 
 
 		log.Printf("[DEBUG]   Deleting Resource Group %q..", groupName)
 		// NOTE: we're intentionally not using DeleteThenPoll since fire-and-forgetting these is fine
-		if _, err := client.ResourceManager.ResourcesClient.Delete(ctx, id, resourcegroups.DefaultDeleteOperationOptions()); err != nil {
+		if _, err := client.ResourceManager.ResourcesGroupsClient.Delete(ctx, id, resourcegroups.DefaultDeleteOperationOptions()); err != nil {
 			log.Printf("[DEBUG]   Error during deletion of Resource Group %q: %s", groupName, err)
 			continue
 		}

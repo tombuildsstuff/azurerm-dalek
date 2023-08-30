@@ -9,7 +9,9 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces"
 	paloAltoNetworks "github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29"
+	resourceGraph "github.com/hashicorp/go-azure-sdk/resource-manager/resourcegraph/2022-10-01/resources"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	serviceBus "github.com/hashicorp/go-azure-sdk/resource-manager/servicebus/2022-01-01-preview"
@@ -37,12 +39,14 @@ type MicrosoftGraphClient struct {
 
 type ResourceManagerClient struct {
 	DataProtection                  *dataProtection.Client
-	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
 	LocksClient                     *managementlocks.ManagementLocksClient
-	ManagementClient                *managementgroups.ManagementGroupsClient
+	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
 	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
+	ManagementClient                *managementgroups.ManagementGroupsClient
+	NotificationHubNamespaceClient  *namespaces.NamespacesClient
 	PaloAlto                        *paloAltoNetworks.Client
-	ResourcesClient                 *resourcegroups.ResourceGroupsClient
+	ResourceGraphClient             *resourceGraph.ResourcesClient
+	ResourcesGroupsClient           *resourcegroups.ResourceGroupsClient
 	ServiceBus                      *serviceBus.Client
 	StorageSyncClient               *storagesyncservicesresource.StorageSyncServicesResourceClient
 	StorageSyncGroupClient          *syncgroupresource.SyncGroupResourceClient
@@ -179,15 +183,28 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	}
 	managedHsmsClient.Client.Authorizer = resourceManagerAuthorizer
 
+	notificationHubNamespacesClient, err := namespaces.NewNamespacesClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Notification Hub Namespaces Client: %+v", err)
+	}
+	notificationHubNamespacesClient.Client.Authorizer = resourceManagerAuthorizer
+
 	paloAltoClient, err := paloAltoNetworks.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = resourceManagerAuthorizer
 	})
+
+	resourceGraphClient, err := resourceGraph.NewResourcesClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building ResourceGraph client: %+v", err)
+	}
+	resourceGraphClient.Client.Authorizer = resourceManagerAuthorizer
 
 	resourcesClient, err := resourcegroups.NewResourceGroupsClientWithBaseURI(environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building Resources client: %+v", err)
 	}
 	resourcesClient.Client.Authorizer = resourceManagerAuthorizer
+
 	serviceBusClient, err := serviceBus.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = resourceManagerAuthorizer
 	})
@@ -215,13 +232,15 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 
 	return &ResourceManagerClient{
 		DataProtection:                  dataProtectionClient,
-		MachineLearningWorkspacesClient: workspacesClient,
-		ResourcesClient:                 resourcesClient,
-		ServiceBus:                      serviceBusClient,
 		LocksClient:                     locksClient,
-		ManagementClient:                managementClient,
+		MachineLearningWorkspacesClient: workspacesClient,
 		ManagedHSMsClient:               managedHsmsClient,
+		ManagementClient:                managementClient,
+		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
 		PaloAlto:                        paloAltoClient,
+		ResourceGraphClient:             resourceGraphClient,
+		ResourcesGroupsClient:           resourcesClient,
+		ServiceBus:                      serviceBusClient,
 		StorageSyncClient:               storageSyncClient,
 		StorageSyncGroupClient:          storageSyncGroupClient,
 		StorageSyncCloudEndpointClient:  storageSyncCloudEndpointClient,
