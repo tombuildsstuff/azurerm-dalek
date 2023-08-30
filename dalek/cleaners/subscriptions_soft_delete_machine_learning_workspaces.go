@@ -32,7 +32,13 @@ func (p purgeSoftDeletedMachineLearningWorkspacesInSubscriptionCleaner) Cleanup(
 			return fmt.Errorf("parsing Machine Learning Workspace ID %q: %+v", *workspace.Id, err)
 		}
 		log.Printf("[DEBUG] Purging Soft-Deleted %s..", *workspaceId)
+		if !opts.ActuallyDelete {
+			log.Printf("[DEBUG] Would have purged soft-deleted Machine Learning Workspace %q..", *workspaceId)
+			continue
+		}
+
 		purge := true
+		log.Printf("[DEBUG] Purging Soft-Deleted %s..", *workspaceId)
 		if err := client.ResourceManager.MachineLearningWorkspacesClient.DeleteThenPoll(ctx, *workspaceId, workspaces.DeleteOperationOptions{ForceToPurge: &purge}); err != nil {
 			return fmt.Errorf("purging %s: %+v", *workspaceId, err)
 		}

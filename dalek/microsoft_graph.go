@@ -10,27 +10,28 @@ import (
 )
 
 func (d *Dalek) MicrosoftGraph(ctx context.Context) error {
-	log.Printf("[DEBUG] Preparing to delete Service Principals")
-	if err := d.deleteMicrosoftGraphServicePrincipals(ctx); err != nil {
-		return fmt.Errorf("deleting Service Principals: %+v", err)
-	}
-
-	log.Printf("[DEBUG] Preparing to delete Applications")
-	if err := d.deleteMicrosoftGraphApplications(ctx); err != nil {
-		return fmt.Errorf("deleting Applications: %+v", err)
-	}
-
-	log.Printf("[DEBUG] Preparing to delete Groups")
-	if err := d.deleteMicrosoftGraphGroups(ctx); err != nil {
-		return fmt.Errorf("deleting Groups: %+v", err)
-	}
-
-	log.Printf("[DEBUG] Preparing to delete Users")
-	if err := d.deleteMicrosoftGraphUsers(ctx); err != nil {
-		return fmt.Errorf("deleting Users: %+v", err)
-	}
-
 	return nil
+	//log.Printf("[DEBUG] Preparing to delete Service Principals")
+	//if err := d.deleteMicrosoftGraphServicePrincipals(ctx); err != nil {
+	//	return fmt.Errorf("deleting Service Principals: %+v", err)
+	//}
+	//
+	//log.Printf("[DEBUG] Preparing to delete Applications")
+	//if err := d.deleteMicrosoftGraphApplications(ctx); err != nil {
+	//	return fmt.Errorf("deleting Applications: %+v", err)
+	//}
+	//
+	//log.Printf("[DEBUG] Preparing to delete Groups")
+	//if err := d.deleteMicrosoftGraphGroups(ctx); err != nil {
+	//	return fmt.Errorf("deleting Groups: %+v", err)
+	//}
+	//
+	//log.Printf("[DEBUG] Preparing to delete Users")
+	//if err := d.deleteMicrosoftGraphUsers(ctx); err != nil {
+	//	return fmt.Errorf("deleting Users: %+v", err)
+	//}
+	//
+	//return nil
 }
 
 func (d *Dalek) deleteMicrosoftGraphApplications(ctx context.Context) error {

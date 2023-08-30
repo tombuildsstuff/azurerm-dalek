@@ -33,7 +33,7 @@ func main() {
 		NumberOfResourceGroupsToDelete: int64(1000),
 		Prefix:                         *prefix,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Hour)
 	defer cancel()
 	if err := run(ctx, credentials, opts); err != nil {
 		log.Fatalf(err.Error())

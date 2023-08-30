@@ -31,6 +31,13 @@ func (p purgeSoftDeletedManagedHSMsInSubscriptionCleaner) Cleanup(ctx context.Co
 			return fmt.Errorf("parsing Managed HSM ID %q: %+v", *hsm.Id, err)
 		}
 		log.Printf("[DEBUG] Purging Soft-Deleted %s..", *hsmId)
+
+		if !opts.ActuallyDelete {
+			log.Printf("[DEBUG] Would have purged soft-deleted Managed HSM %q..", *hsmId)
+			continue
+		}
+
+		log.Printf("[DEBUG] Purging Soft-Deleted %s..", *hsmId)
 		if err := client.ResourceManager.ManagedHSMsClient.PurgeDeletedThenPoll(ctx, *hsmId); err != nil {
 			return fmt.Errorf("purging %s: %+v", *hsmId, err)
 		}

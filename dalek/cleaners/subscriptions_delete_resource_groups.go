@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
@@ -37,23 +38,28 @@ func (d deleteResourceGroupsInSubscriptionCleaner) Cleanup(ctx context.Context, 
 		log.Printf("[DEBUG]   No Resource Groups found")
 		return nil
 	}
+
+	resourceGroups := make([]string, 0)
 	for _, resource := range *groups.Model {
-		groupName := *resource.Name
+		if strings.EqualFold(*resource.Properties.ProvisioningState, "Deleting") {
+			log.Printf("[DEBUG] Resource Group %q is already being deleted - Skipping..", *resource.Name)
+			continue
+		}
+		if !shouldDeleteResourceGroup(resource, opts.Prefix) {
+			log.Printf("[DEBUG] Resource Group %q shouldn't be deleted - Skipping..", *resource.Name)
+			continue
+		}
+
+		resourceGroups = append(resourceGroups, *resource.Name)
+	}
+	sort.Strings(resourceGroups)
+
+	for _, groupName := range resourceGroups {
 		log.Printf("[DEBUG] Resource Group: %q", groupName)
 
 		id := commonids.NewResourceGroupID(subscriptionId.SubscriptionId, groupName)
-		if strings.EqualFold(*resource.Properties.ProvisioningState, "Deleting") {
-			log.Println("[DEBUG]   Already being deleted - Skipping..")
-			continue
-		}
-
-		if !shouldDeleteResourceGroup(resource, opts.Prefix) {
-			log.Println("[DEBUG]   Shouldn't Delete - Skipping..")
-			continue
-		}
-
 		if !opts.ActuallyDelete {
-			log.Printf("[DEBUG]   Would have deleted group %q..", groupName)
+			log.Printf("[DEBUG]   Would have deleted %s..", id)
 			continue
 		}
 
@@ -62,7 +68,7 @@ func (d deleteResourceGroupsInSubscriptionCleaner) Cleanup(ctx context.Context, 
 		// which are split out for simplicity since there's a number of them
 		for _, cleaner := range ResourceGroupCleaners {
 			log.Printf("[DEBUG] Running Resource Group Cleaner %q..", cleaner.Name())
-			if err := cleaner.Cleanup(ctx, id, client); err != nil {
+			if err := cleaner.Cleanup(ctx, id, client, opts); err != nil {
 				return fmt.Errorf("running Cleaner %q for %s: %+v", cleaner.Name(), id, err)
 			}
 		}
