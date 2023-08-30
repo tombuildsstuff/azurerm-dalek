@@ -157,12 +157,11 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	if err != nil {
 		return nil, fmt.Errorf("building Resource Manager authorizer: %+v", err)
 	}
-	resourceManagerEndpoint, ok := environment.ResourceManager.Endpoint()
-	if !ok {
-		return nil, fmt.Errorf("environment %q was missing a Resource Manager endpoint", environment.Name)
-	}
 
-	locksClient := managementlocks.NewManagementLocksClientWithBaseURI(*resourceManagerEndpoint)
+	locksClient, err := managementlocks.NewManagementLocksClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Locks Client: %+v", err)
+	}
 	locksClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
 	workspacesClient, err := workspaces.NewWorkspacesClientWithBaseURI(environment.ResourceManager)
@@ -174,7 +173,10 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	managementClient, err := managementgroups.NewManagementGroupsClientWithBaseURI(environment.ResourceManager)
 	managementClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
-	managedHsmsClient := managedhsms.NewManagedHsmsClientWithBaseURI(*resourceManagerEndpoint)
+	managedHsmsClient, err := managedhsms.NewManagedHsmsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Managed HSM Client: %+v", err)
+	}
 	managedHsmsClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
 	paloAltoLocalRulestackCertificatesClient, err := certificateobjectlocalrulestack.NewCertificateObjectLocalRulestackClientWithBaseURI(environment.ResourceManager)
@@ -192,7 +194,10 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	paloAltoLocalRulestackPrefixClient, err := prefixlistlocalrulestack.NewPrefixListLocalRulestackClientWithBaseURI(environment.ResourceManager)
 	paloAltoLocalRulestackPrefixClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
-	resourcesClient := resourcegroups.NewResourceGroupsClientWithBaseURI(*resourceManagerEndpoint)
+	resourcesClient, err := resourcegroups.NewResourceGroupsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Resources Client: %+v", err)
+	}
 	resourcesClient.Client.Authorizer = autorest.AutorestAuthorizer(resourceManagerAuthorizer)
 
 	serviceBusClient, err := servicebusV20220101Preview.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
@@ -222,11 +227,11 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 
 	return &ResourceManagerClient{
 		MachineLearningWorkspacesClient:          workspacesClient,
-		ResourcesClient:                          &resourcesClient,
+		ResourcesClient:                          resourcesClient,
 		ServiceBus:                               serviceBusClient,
-		LocksClient:                              &locksClient,
+		LocksClient:                              locksClient,
 		ManagementClient:                         managementClient,
-		ManagedHSMsClient:                        &managedHsmsClient,
+		ManagedHSMsClient:                        managedHsmsClient,
 		PaloAltoLocalRulestackCertificatesClient: paloAltoLocalRulestackCertificatesClient,
 		PaloAltoLocalRulestacksClient:            paloAltoLocalRulestacksClient,
 		PaloAltoLocalRulestackRuleClient:         paloAltoLocalRulesClient,
