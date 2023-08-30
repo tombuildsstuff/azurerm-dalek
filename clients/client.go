@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces"
 	paloAltoNetworks "github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29"
+	resourceGraph "github.com/hashicorp/go-azure-sdk/resource-manager/resourcegraph/2022-10-01/resources"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
 	serviceBus "github.com/hashicorp/go-azure-sdk/resource-manager/servicebus/2022-01-01-preview"
@@ -44,6 +45,7 @@ type ResourceManagerClient struct {
 	ManagementClient                *managementgroups.ManagementGroupsClient
 	NotificationHubNamespaceClient  *namespaces.NamespacesClient
 	PaloAlto                        *paloAltoNetworks.Client
+	ResourceGraphClient             *resourceGraph.ResourcesClient
 	ResourcesGroupsClient           *resourcegroups.ResourceGroupsClient
 	ServiceBus                      *serviceBus.Client
 	StorageSyncClient               *storagesyncservicesresource.StorageSyncServicesResourceClient
@@ -191,11 +193,18 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		c.Authorizer = resourceManagerAuthorizer
 	})
 
+	resourceGraphClient, err := resourceGraph.NewResourcesClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building ResourceGraph client: %+v", err)
+	}
+	resourceGraphClient.Client.Authorizer = resourceManagerAuthorizer
+
 	resourcesClient, err := resourcegroups.NewResourceGroupsClientWithBaseURI(environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building Resources client: %+v", err)
 	}
 	resourcesClient.Client.Authorizer = resourceManagerAuthorizer
+
 	serviceBusClient, err := serviceBus.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = resourceManagerAuthorizer
 	})
@@ -229,6 +238,7 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		ManagementClient:                managementClient,
 		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
 		PaloAlto:                        paloAltoClient,
+		ResourceGraphClient:             resourceGraphClient,
 		ResourcesGroupsClient:           resourcesClient,
 		ServiceBus:                      serviceBusClient,
 		StorageSyncClient:               storageSyncClient,
