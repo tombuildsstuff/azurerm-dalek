@@ -11,7 +11,11 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces"
 	paloAltoNetworks "github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservices/2023-04-01/vaults"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-02-01/protectioncontainers"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-04-01/backupprotecteditems"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-04-01/backupprotectioncontainers"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-04-01/protecteditems"
 	resourceGraph "github.com/hashicorp/go-azure-sdk/resource-manager/resourcegraph/2022-10-01/resources"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2020-05-01/managementlocks"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resources/2022-09-01/resourcegroups"
@@ -48,12 +52,16 @@ type ResourceManagerClient struct {
 	NotificationHubNamespaceClient                   *namespaces.NamespacesClient
 	PaloAlto                                         *paloAltoNetworks.Client
 	RecoveryServicesBackupProtectionContainersClient *backupprotectioncontainers.BackupProtectionContainersClient
+	RecoveryServicesBackupProtectedItemsClient       *backupprotecteditems.BackupProtectedItemsClient
+	RecoveryServicesProtectionContainersClient       *protectioncontainers.ProtectionContainersClient
+	RecoveryServicesProtectedItemsClient             *protecteditems.ProtectedItemsClient
 	ResourceGraphClient                              *resourceGraph.ResourcesClient
 	ResourcesGroupsClient                            *resourcegroups.ResourceGroupsClient
 	ServiceBus                                       *serviceBus.Client
 	StorageSyncClient                                *storagesyncservicesresource.StorageSyncServicesResourceClient
 	StorageSyncGroupClient                           *syncgroupresource.SyncGroupResourceClient
 	StorageSyncCloudEndpointClient                   *cloudendpointresource.CloudEndpointResourceClient
+	RecoverServicesVaultsClient                      *vaults.VaultsClient
 }
 
 type Credentials struct {
@@ -242,6 +250,21 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	backupProtectionContainersClient := backupprotectioncontainers.NewBackupProtectionContainersClientWithBaseURI(*resourceManagerEndpoint)
 	backupProtectionContainersClient.Client.Authorizer = autorestWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
 
+	backupProtectedItemsClient := backupprotecteditems.NewBackupProtectedItemsClientWithBaseURI(*resourceManagerEndpoint)
+	backupProtectedItemsClient.Client.Authorizer = autorestWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	recoveryServicesVaultsClient, err := vaults.NewVaultsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building VaultsClient: %+v", err)
+	}
+	recoveryServicesVaultsClient.Client.Authorizer = resourceManagerAuthorizer
+
+	recoveryServicesProtectionContainersClient := protectioncontainers.NewProtectionContainersClientWithBaseURI(*resourceManagerEndpoint)
+	recoveryServicesProtectionContainersClient.Client.Authorizer = autorestWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+
+	recoveryServicesProtectedItemsClient := protecteditems.NewProtectedItemsClientWithBaseURI(*resourceManagerEndpoint)
+	recoveryServicesProtectedItemsClient.Client.Authorizer = autorestWrapper.AutorestAuthorizer(resourceManagerAuthorizer)
+
 	return &ResourceManagerClient{
 		DataProtection:                  dataProtectionClient,
 		LocksClient:                     locksClient,
@@ -250,12 +273,16 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		ManagementClient:                managementClient,
 		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
 		PaloAlto:                        paloAltoClient,
+		RecoveryServicesBackupProtectedItemsClient:       &backupProtectedItemsClient,
 		RecoveryServicesBackupProtectionContainersClient: &backupProtectionContainersClient,
-		ResourceGraphClient:            resourceGraphClient,
-		ResourcesGroupsClient:          resourcesClient,
-		ServiceBus:                     serviceBusClient,
-		StorageSyncClient:              storageSyncClient,
-		StorageSyncGroupClient:         storageSyncGroupClient,
-		StorageSyncCloudEndpointClient: storageSyncCloudEndpointClient,
+		RecoverServicesVaultsClient:                      recoveryServicesVaultsClient,
+		RecoveryServicesProtectionContainersClient:       &recoveryServicesProtectionContainersClient,
+		RecoveryServicesProtectedItemsClient:             &recoveryServicesProtectedItemsClient,
+		ResourceGraphClient:                              resourceGraphClient,
+		ResourcesGroupsClient:                            resourcesClient,
+		ServiceBus:                                       serviceBusClient,
+		StorageSyncClient:                                storageSyncClient,
+		StorageSyncGroupClient:                           storageSyncGroupClient,
+		StorageSyncCloudEndpointClient:                   storageSyncCloudEndpointClient,
 	}, nil
 }

@@ -5,12 +5,18 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
+	"github.com/hashicorp/go-azure-helpers/lang/response"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservices/2023-04-01/vaults"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-02-01/protectioncontainers"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-04-01/backupprotecteditems"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-04-01/backupprotectioncontainers"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/recoveryservicesbackup/2023-04-01/protecteditems"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/resourcegraph/2022-10-01/resources"
+	"github.com/hashicorp/go-azure-sdk/sdk/client/pollers"
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
 	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
@@ -24,6 +30,11 @@ func (c recoveryServicesResourceGroupCleaner) Name() string {
 }
 
 func (c recoveryServicesResourceGroupCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
+	vaultsClient := client.ResourceManager.RecoverServicesVaultsClient
+	protectionContainersClient := client.ResourceManager.RecoveryServicesProtectionContainersClient
+	backupProtectedItemsClient := client.ResourceManager.RecoveryServicesBackupProtectedItemsClient
+	protectedItemsClient := client.ResourceManager.RecoveryServicesProtectedItemsClient
+
 	log.Printf("[DEBUG] Retrieving Recovery Services Vaults in %s..", id)
 	vaultIds, err := c.findRecoveryServiceVaultIDs(ctx, id, client)
 	if err != nil {
@@ -35,21 +46,84 @@ func (c recoveryServicesResourceGroupCleaner) Cleanup(ctx context.Context, id co
 		// list all of the items within the protection container
 
 		backupContainerVaultId := backupprotectioncontainers.NewVaultID(vaultId.SubscriptionId, vaultId.ResourceGroupName, vaultId.VaultName)
-		listOpts := backupprotectioncontainers.DefaultListOperationOptions()
+		filter := "backupManagementType eq 'AzureStorage'"
+		listOpts := backupprotectioncontainers.ListOperationOptions{Filter: &filter}
 		results, err := client.ResourceManager.RecoveryServicesBackupProtectionContainersClient.ListComplete(ctx, backupContainerVaultId, listOpts)
 		if err != nil {
 			return fmt.Errorf("listing Backup Protection Containers within %s: %+v", backupContainerVaultId, err)
 		}
 
 		for _, item := range results.Items {
-			log.Printf("TOMTOMTOM: %q", *item.Id)
+			protectionContainerId, err := protectioncontainers.ParseProtectionContainerID(*item.Id)
+			if err != nil {
+				return err
+			}
+
+			if !opts.ActuallyDelete {
+				log.Printf("[DEBUG] Would have deleted %s..", protectionContainerId)
+				continue
+			}
+
+			if _, err = protectionContainersClient.Unregister(ctx, *protectionContainerId); err != nil {
+				return fmt.Errorf("unable to unregister %s: %+v", protectionContainerId, err)
+			}
+
+			log.Printf("[DEBUG] Polling until Protection Container is unregistered for %s..", *protectionContainerId)
+			pollerType := recoveryServicesProtectionContainerPoller{
+				client:   protectionContainersClient,
+				configId: *protectionContainerId,
+			}
+			poller := pollers.NewPoller(pollerType, 30*time.Second, pollers.DefaultNumberOfDroppedConnectionsToAllow)
+			if err := poller.PollUntilDone(ctx); err != nil {
+				return fmt.Errorf("polling until the Protection Container is unregistered for %s: %+v", *protectionContainerId, err)
+			}
+			log.Printf("[DEBUG] Protection Container Unregistered for %s", vaultId)
 		}
 
-		// protectedItemName := fmt.Sprintf("VM;iaasvmcontainerv2;%s;%s", parsedVmId.ResourceGroup, parsedVmId.Name)
-		//	containerName := fmt.Sprintf("iaasvmcontainer;iaasvmcontainerv2;%s;%s", parsedVmId.ResourceGroup, parsedVmId.Name)
-		// /subscriptions/1a6092a6-137e-4025-9a7c-ef77f76f2c02/resourceGroups/acctestRG-backup-230222073824999320/providers/Microsoft.RecoveryServices/vaults/acctest-230222073824999320/backupFabrics/Azure/protectionContainers/IaasVMContainer;iaasvmcontainerv2;acctestRG-backup-230222073824999320;acctestvm/protectedItems/VM;iaasvmcontainerv2;acctestRG-backup-230222073824999320;acctestvm
+		protectedItemVaultId := backupprotecteditems.NewVaultID(vaultId.SubscriptionId, vaultId.ResourceGroupName, vaultId.VaultName)
+		protectedItems, err := backupProtectedItemsClient.ListComplete(ctx, protectedItemVaultId, backupprotecteditems.DefaultListOperationOptions())
+		if err != nil {
+			return fmt.Errorf("listing Backup Protected Items with %s: %+v", protectedItemVaultId, err)
+		}
 
-		// we then need to find any Replicated Items within this Recovery Services Vault
+		for _, item := range protectedItems.Items {
+			protectedItemId, err := protecteditems.ParseProtectedItemID(*item.Id)
+			if err != nil {
+				return err
+			}
+
+			if !opts.ActuallyDelete {
+				log.Printf("[DEBUG] Would have deleted %s..", protectedItemId)
+				continue
+			}
+
+			if _, err = protectedItemsClient.Delete(ctx, *protectedItemId); err != nil {
+				return fmt.Errorf("unable to delete %s: %+v", protectedItemId, err)
+			}
+
+			log.Printf("[DEBUG] Polling until Protected Item is deleted for %s..", *protectedItemId)
+			pollerType := recoveryServicesProtectedItemPoller{
+				client:   protectedItemsClient,
+				configId: *protectedItemId,
+			}
+			poller := pollers.NewPoller(pollerType, 30*time.Second, pollers.DefaultNumberOfDroppedConnectionsToAllow)
+			if err := poller.PollUntilDone(ctx); err != nil {
+				return fmt.Errorf("polling until the Protected Item is deleted for %s: %+v", *protectedItemId, err)
+			}
+			log.Printf("[DEBUG] Protected Item Deleted for %s", vaultId)
+
+			// removing the protected item is eventually consistent against the vault so we will poll the protected items list until it is removed.
+			listPollerType := recoveryServicesBackupProtectedItemListPoller{
+				client:          backupProtectedItemsClient,
+				vaultId:         protectedItemVaultId,
+				protectedItemId: protectedItemId.String(),
+			}
+			listPoller := pollers.NewPoller(listPollerType, 30*time.Second, pollers.DefaultNumberOfDroppedConnectionsToAllow)
+			if err := listPoller.PollUntilDone(ctx); err != nil {
+				return fmt.Errorf("polling until the Protected Item removed from Vault ListComplete command for %s: %+v", *protectedItemId, err)
+			}
+			log.Printf("[DEBUG] Protected Item Removed for %s", vaultId)
+		}
 
 		if !opts.ActuallyDelete {
 			log.Printf("[DEBUG] Would have deleted %s..", vaultId)
@@ -58,9 +132,9 @@ func (c recoveryServicesResourceGroupCleaner) Cleanup(ctx context.Context, id co
 
 		log.Printf("[DEBUG] Deleting %s..", vaultId)
 
-		//if err := client.ResourceManager.NotificationHubNamespaceClient.DeleteThenPoll(ctx, namespaceId); err != nil {
-		//	return fmt.Errorf("deleting %s: %+v", namespaceId, err)
-		//}
+		if _, err = vaultsClient.Delete(ctx, vaultId); err != nil {
+			return fmt.Errorf("deleting %s: %+v", vaultId, err)
+		}
 		log.Printf("[DEBUG] Deleted %s.", vaultId)
 	}
 
@@ -125,4 +199,91 @@ resources
 	}
 
 	return &vaultIds, nil
+}
+
+type recoveryServicesProtectionContainerPoller struct {
+	client   *protectioncontainers.ProtectionContainersClient
+	configId protectioncontainers.ProtectionContainerId
+}
+
+func (s recoveryServicesProtectionContainerPoller) Poll(ctx context.Context) (*pollers.PollResult, error) {
+	// poll until the protection container is deleted
+	result, err := s.client.Get(ctx, s.configId)
+	if err != nil {
+		if response.WasNotFound(result.HttpResponse) {
+			return &pollers.PollResult{
+				Status: pollers.PollingStatusSucceeded,
+			}, nil
+		}
+		return nil, pollers.PollingFailedError{
+			Message: err.Error(),
+		}
+	}
+
+	return &pollers.PollResult{
+		Status:       pollers.PollingStatusInProgress,
+		PollInterval: 30 * time.Second,
+	}, nil
+}
+
+type recoveryServicesProtectedItemPoller struct {
+	client   *protecteditems.ProtectedItemsClient
+	configId protecteditems.ProtectedItemId
+}
+
+func (s recoveryServicesProtectedItemPoller) Poll(ctx context.Context) (*pollers.PollResult, error) {
+	// poll until the status protected item is deleted
+	result, err := s.client.Get(ctx, s.configId, protecteditems.DefaultGetOperationOptions())
+	if err != nil {
+		if response.WasNotFound(result.HttpResponse) {
+			return &pollers.PollResult{
+				Status: pollers.PollingStatusSucceeded,
+			}, nil
+		}
+		return nil, pollers.PollingFailedError{
+			Message: err.Error(),
+		}
+	}
+
+	return &pollers.PollResult{
+		Status:       pollers.PollingStatusInProgress,
+		PollInterval: 30 * time.Second,
+	}, nil
+}
+
+type recoveryServicesBackupProtectedItemListPoller struct {
+	client          *backupprotecteditems.BackupProtectedItemsClient
+	vaultId         backupprotecteditems.VaultId
+	protectedItemId string
+}
+
+func (s recoveryServicesBackupProtectedItemListPoller) Poll(ctx context.Context) (*pollers.PollResult, error) {
+	// poll until the list doesn't contain the protectedItemId
+	result, err := s.client.ListComplete(ctx, s.vaultId, backupprotecteditems.DefaultListOperationOptions())
+	if err != nil {
+		if len(result.Items) == 0 {
+			return &pollers.PollResult{
+				Status: pollers.PollingStatusSucceeded,
+			}, nil
+		}
+		return nil, pollers.PollingFailedError{
+			Message: err.Error(),
+		}
+	}
+
+	for _, item := range result.Items {
+		if item.Id == nil {
+			continue
+		}
+		if strings.EqualFold(*item.Id, s.protectedItemId) {
+			return &pollers.PollResult{
+				Status:       pollers.PollingStatusInProgress,
+				PollInterval: 30 * time.Second,
+			}, nil
+		}
+	}
+
+	return &pollers.PollResult{
+		Status: pollers.PollingStatusSucceeded,
+	}, nil
 }
