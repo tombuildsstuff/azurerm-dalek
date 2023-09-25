@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/go-azure-helpers v0.59.0
 	github.com/hashicorp/go-azure-sdk v0.20230829.1225856
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/manicminer/hamilton v0.63.0
+	github.com/manicminer/hamilton v0.63.1-0.20230925221629-4e2cb467bcc0
 )
 
 require (

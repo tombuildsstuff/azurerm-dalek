@@ -155,7 +155,7 @@ github.com/hashicorp/terraform-plugin-sdk/v2/internal/plugin/convert
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/tfdiags
 github.com/hashicorp/terraform-plugin-sdk/v2/meta
 github.com/hashicorp/terraform-plugin-sdk/v2/terraform
-# github.com/manicminer/hamilton v0.63.0
+# github.com/manicminer/hamilton v0.63.1-0.20230925221629-4e2cb467bcc0
 ## explicit; go 1.16
 github.com/manicminer/hamilton/errors
 github.com/manicminer/hamilton/internal/utils
