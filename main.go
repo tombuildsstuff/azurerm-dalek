@@ -49,17 +49,20 @@ func run(ctx context.Context, credentials clients.Credentials, opts options.Opti
 	log.Printf("[DEBUG] Options: %s", opts)
 
 	client := dalek.NewDalek(sdkClient, opts)
+
 	log.Printf("[DEBUG] Processing Resource Manager..")
 	if err := client.ResourceManager(ctx); err != nil {
 		return fmt.Errorf("processing Resource Manager: %+v", err)
 	}
-	log.Printf("[DEBUG] Processing Microsoft Graph..")
-	if err := client.MicrosoftGraph(ctx); err != nil {
-		return fmt.Errorf("processing Microsoft Graph: %+v", err)
-	}
+
 	log.Printf("[DEBUG] Processing Management Groups..")
 	if err := client.ManagementGroups(ctx); err != nil {
 		return fmt.Errorf("processing Management Groups: %+v", err)
+	}
+
+	log.Printf("[DEBUG] Processing Microsoft Graph..")
+	if err := client.MicrosoftGraph(ctx); err != nil {
+		return fmt.Errorf("processing Microsoft Graph: %+v", err)
 	}
 
 	return nil

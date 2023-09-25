@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/go-azure-sdk/sdk/auth"
 	"github.com/hashicorp/go-azure-sdk/sdk/client/resourcemanager"
 	"github.com/hashicorp/go-azure-sdk/sdk/environments"
-	"github.com/manicminer/hamilton/msgraph"
 )
 
 type AzureClient struct {
@@ -31,10 +30,8 @@ type AzureClient struct {
 }
 
 type MicrosoftGraphClient struct {
-	Applications      *msgraph.ApplicationsClient
-	Groups            *msgraph.GroupsClient
-	ServicePrincipals *msgraph.ServicePrincipalsClient
-	Users             *msgraph.UsersClient
+	Authorizer auth.Authorizer
+	Endpoint   string
 }
 
 type ResourceManagerClient struct {
@@ -125,27 +122,9 @@ func buildMicrosoftGraphClient(ctx context.Context, creds auth.Credentials, envi
 		return nil, fmt.Errorf("environment %q was missing a Microsoft Graph endpoint", environment.Name)
 	}
 
-	applicationsClient := msgraph.NewApplicationsClient()
-	applicationsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	applicationsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
-	groupsClient := msgraph.NewGroupsClient()
-	groupsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	groupsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
-	servicePrincipalsClient := msgraph.NewServicePrincipalsClient()
-	servicePrincipalsClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	servicePrincipalsClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
-	usersClient := msgraph.NewUsersClient()
-	usersClient.BaseClient.Authorizer = microsoftGraphAuthorizer
-	usersClient.BaseClient.Endpoint = *microsoftGraphEndpoint
-
 	return &MicrosoftGraphClient{
-		Applications:      applicationsClient,
-		Groups:            groupsClient,
-		ServicePrincipals: servicePrincipalsClient,
-		Users:             usersClient,
+		Authorizer: microsoftGraphAuthorizer,
+		Endpoint:   *microsoftGraphEndpoint,
 	}, nil
 }
 
