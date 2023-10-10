@@ -9,6 +9,7 @@ import (
 )
 
 var SubscriptionCleaners = []SubscriptionCleaner{
+	deleteNetAppSubscriptionCleaner{},
 	deleteStorageSyncSubscriptionCleaner{},
 	deleteResourceGroupsInSubscriptionCleaner{},
 	purgeSoftDeletedManagedHSMsInSubscriptionCleaner{},

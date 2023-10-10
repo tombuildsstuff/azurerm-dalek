@@ -9,6 +9,10 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/managementgroups/2021-04-01/managementgroups"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2022-05-01/capacitypools"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2022-05-01/netappaccounts"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2022-05-01/volumes"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2022-05-01/volumesreplication"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces"
 	paloAltoNetworks "github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29"
 	resourceGraph "github.com/hashicorp/go-azure-sdk/resource-manager/resourcegraph/2022-10-01/resources"
@@ -43,6 +47,10 @@ type ResourceManagerClient struct {
 	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
 	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
 	ManagementClient                *managementgroups.ManagementGroupsClient
+	NetAppAccountClient             *netappaccounts.NetAppAccountsClient
+	NetAppCapacityPoolClient        *capacitypools.CapacityPoolsClient
+	NetAppVolumeClient              *volumes.VolumesClient
+	NetAppVolumeReplicationClient   *volumesreplication.VolumesReplicationClient
 	NotificationHubNamespaceClient  *namespaces.NamespacesClient
 	PaloAlto                        *paloAltoNetworks.Client
 	ResourceGraphClient             *resourceGraph.ResourcesClient
@@ -183,6 +191,30 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	}
 	managedHsmsClient.Client.Authorizer = resourceManagerAuthorizer
 
+	netAppAccountClient, err := netappaccounts.NewNetAppAccountsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building NetApp Account Client: %+v", err)
+	}
+	netAppAccountClient.Client.Authorizer = resourceManagerAuthorizer
+
+	netAppCapacityPoolClient, err := capacitypools.NewCapacityPoolsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building NetApp Capacity Pool Client: %+v", err)
+	}
+	netAppCapacityPoolClient.Client.Authorizer = resourceManagerAuthorizer
+
+	netAppVolumeClient, err := volumes.NewVolumesClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building NetApp Volume Client: %+v", err)
+	}
+	netAppVolumeClient.Client.Authorizer = resourceManagerAuthorizer
+
+	netAppVolumeReplicationClient, err := volumesreplication.NewVolumesReplicationClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building NetApp Volume Replication Client: %+v", err)
+	}
+	netAppVolumeReplicationClient.Client.Authorizer = resourceManagerAuthorizer
+
 	notificationHubNamespacesClient, err := namespaces.NewNamespacesClientWithBaseURI(environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building Notification Hub Namespaces Client: %+v", err)
@@ -236,6 +268,10 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		MachineLearningWorkspacesClient: workspacesClient,
 		ManagedHSMsClient:               managedHsmsClient,
 		ManagementClient:                managementClient,
+		NetAppAccountClient:             netAppAccountClient,
+		NetAppCapacityPoolClient:        netAppCapacityPoolClient,
+		NetAppVolumeClient:              netAppVolumeClient,
+		NetAppVolumeReplicationClient:   netAppVolumeReplicationClient,
 		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
 		PaloAlto:                        paloAltoClient,
 		ResourceGraphClient:             resourceGraphClient,
