@@ -28,7 +28,7 @@ func (serviceBusNamespaceBreakPairingCleaner) Cleanup(ctx context.Context, id co
 	serviceBusClient := client.ResourceManager.ServiceBus
 	namespacesInResourceGroup, err := serviceBusClient.Namespaces.ListByResourceGroupComplete(ctx, id)
 	if err != nil {
-		return fmt.Errorf("listing the ServiceBus Namespaces within %s: %+v", id, err)
+		log.Printf("[DEBUG] Error retrieving the ServiceBus Namespaces within %s: %+v", id, err)
 	}
 
 	for _, namespace := range namespacesInResourceGroup.Items {

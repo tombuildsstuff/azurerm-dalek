@@ -3,10 +3,10 @@ package cleaners
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-azure-helpers/lang/response"
 	"log"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
+	"github.com/hashicorp/go-azure-helpers/lang/response"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/certificateobjectlocalrulestack"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29/fqdnlistlocalrulestack"
@@ -30,7 +30,7 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 
 	rulestacks, err := rulestacksClient.ListByResourceGroupComplete(ctx, id)
 	if err != nil {
-		return err
+		log.Printf("[DEBUG] Error retrieving the Palo Alto Local Rulestacks within %s: %+v", id, err)
 	}
 
 	// Rules

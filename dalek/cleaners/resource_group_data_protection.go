@@ -25,7 +25,7 @@ func (removeDataProtectionFromResourceGroupCleaner) Name() string {
 func (removeDataProtectionFromResourceGroupCleaner) Cleanup(ctx context.Context, id commonids.ResourceGroupId, client *clients.AzureClient, opts options.Options) error {
 	backupVaults, err := client.ResourceManager.DataProtection.BackupVaults.GetInResourceGroupComplete(ctx, id)
 	if err != nil {
-		return fmt.Errorf("retrieving the Backup Vaults within %s: %+v", id, err)
+		log.Printf("[DEBUG] Error retrieving the Backup Vaults within %s: %+v", id, err)
 	}
 	for _, vault := range backupVaults.Items {
 		vaultId := backupvaults.NewBackupVaultID(id.SubscriptionId, id.ResourceGroupName, *vault.Name)
