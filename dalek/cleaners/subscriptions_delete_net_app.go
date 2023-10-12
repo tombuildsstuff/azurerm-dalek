@@ -110,7 +110,8 @@ func (p deleteNetAppSubscriptionCleaner) Cleanup(ctx context.Context, subscripti
 
 				forceDelete := true
 				if err = netAppVolumeClient.DeleteThenPoll(ctx, *volumeId, volumes.DeleteOperationOptions{ForceDelete: &forceDelete}); err != nil {
-					return fmt.Errorf("deleting %s: %+v", volumeId, err)
+					// Potential Eventual Consistency Issues so we'll just log and move on
+					log.Printf("[DEBUG] Unable to delete %s: %+v", volumeId, err)
 				}
 			}
 
@@ -120,7 +121,8 @@ func (p deleteNetAppSubscriptionCleaner) Cleanup(ctx context.Context, subscripti
 			}
 
 			if err = netAppCapcityPoolClient.PoolsDeleteThenPoll(ctx, *capacityPoolId); err != nil {
-				return fmt.Errorf("deleting %s: %+v", capacityPoolId, err)
+				// Potential Eventual Consistency Issues so we'll just log and move on
+				log.Printf("[DEBUG] Unable to delete %s: %+v", capacityPoolId, err)
 			}
 
 			// sleeping because there is some eventual consistency for when the capacity pool decouples from the account
@@ -133,7 +135,8 @@ func (p deleteNetAppSubscriptionCleaner) Cleanup(ctx context.Context, subscripti
 		}
 
 		if err = netAppAccountClient.AccountsDeleteThenPoll(ctx, *accountId); err != nil {
-			return fmt.Errorf("deleting %s: %+v", accountId, err)
+			// Potential Eventual Consistency Issues so we'll just log and move on
+			log.Printf("[DEBUG] Unable to delete %s: %+v", accountId, err)
 		}
 	}
 

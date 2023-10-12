@@ -9,7 +9,7 @@ import (
 )
 
 var SubscriptionCleaners = []SubscriptionCleaner{
-	// deleteNetAppSubscriptionCleaner{}, // TODO - This cleaner is exiting the whole run on first error, needs looking into.
+	deleteNetAppSubscriptionCleaner{},
 	deleteStorageSyncSubscriptionCleaner{},
 	deleteResourceGroupsInSubscriptionCleaner{},
 	purgeSoftDeletedManagedHSMsInSubscriptionCleaner{},
