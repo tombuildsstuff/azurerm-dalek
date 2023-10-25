@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2023-04-01-preview/workspaces"
@@ -31,6 +32,12 @@ func (p purgeSoftDeletedMachineLearningWorkspacesInSubscriptionCleaner) Cleanup(
 		if err != nil {
 			return fmt.Errorf("parsing Machine Learning Workspace ID %q: %+v", *workspace.Id, err)
 		}
+
+		if !strings.HasSuffix(workspaceId.ResourceGroupName, opts.Prefix) {
+			log.Printf("[DEBUG] Not deleting Machine Learning Workspace %q as it does not match target RG prefix %q", *workspaceId, opts.Prefix)
+			continue
+		}
+
 		log.Printf("[DEBUG] Purging Soft-Deleted %s..", *workspaceId)
 		if !opts.ActuallyDelete {
 			log.Printf("[DEBUG] Would have purged soft-deleted Machine Learning Workspace %q..", *workspaceId)

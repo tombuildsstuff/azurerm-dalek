@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-azure-helpers/lang/response"
@@ -47,6 +48,11 @@ func (p deleteNetAppSubscriptionCleaner) Cleanup(ctx context.Context, subscripti
 		accountIdForCapacityPool, err := capacitypools.ParseNetAppAccountID(*account.Id)
 		if err != nil {
 			return err
+		}
+
+		if !strings.HasPrefix(accountIdForCapacityPool.ResourceGroupName, opts.Prefix) {
+			log.Printf("[DEBUG] Not deleting %q as it does not match target RG prefix %q", *accountIdForCapacityPool, opts.Prefix)
+			continue
 		}
 
 		if !opts.ActuallyDelete {
