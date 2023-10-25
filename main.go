@@ -36,7 +36,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Hour)
 	defer cancel()
 	if err := run(ctx, credentials, opts); err != nil {
-		log.Fatalf(err.Error())
+		log.Print(err.Error())
 	}
 }
 
