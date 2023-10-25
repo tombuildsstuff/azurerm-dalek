@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/storagesync/2020-03-01/cloudendpointresource"
@@ -44,6 +45,12 @@ func (p deleteStorageSyncSubscriptionCleaner) Cleanup(ctx context.Context, subsc
 		if err != nil {
 			return err
 		}
+
+		if !strings.HasPrefix(storageSyncForGroupId.ResourceGroupName, opts.Prefix) {
+			log.Printf("[DEBUG] Not deleting %q as it does not match target RG prefix %q", *storageSyncForGroupId, opts.Prefix)
+			continue
+		}
+
 		if !opts.ActuallyDelete {
 			log.Printf("[DEBUG] Would have deleted %s..", storageSyncForGroupId)
 			continue
@@ -113,6 +120,9 @@ func (p deleteStorageSyncSubscriptionCleaner) Cleanup(ctx context.Context, subsc
 		}
 
 		storageSyncId, err := storagesyncservicesresource.ParseStorageSyncServiceID(*storageSync.Id)
+		if err != nil {
+			return err
+		}
 		if err = storageSyncClient.StorageSyncServicesDeleteThenPoll(ctx, *storageSyncId); err != nil {
 			return fmt.Errorf("deleting %s: %+v", storageSyncId, err)
 		}
