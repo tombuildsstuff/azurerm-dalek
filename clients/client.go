@@ -166,6 +166,9 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	dataProtectionClient, err := dataProtection.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = resourceManagerAuthorizer
 	})
+	if err != nil {
+		return nil, fmt.Errorf("building Data Protection Client: %+v", err)
+	}
 
 	locksClient, err := managementlocks.NewManagementLocksClientWithBaseURI(environment.ResourceManager)
 	if err != nil {
@@ -224,6 +227,9 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	paloAltoClient, err := paloAltoNetworks.NewClientWithBaseURI(environment.ResourceManager, func(c *resourcemanager.Client) {
 		c.Authorizer = resourceManagerAuthorizer
 	})
+	if err != nil {
+		return nil, fmt.Errorf("building Palo Alto Networks Client: %+v", err)
+	}
 
 	resourceGraphClient, err := resourceGraph.NewResourcesClientWithBaseURI(environment.ResourceManager)
 	if err != nil {
