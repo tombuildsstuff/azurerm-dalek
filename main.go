@@ -37,6 +37,7 @@ func main() {
 	defer cancel()
 	if err := run(ctx, credentials, opts); err != nil {
 		log.Print(err.Error())
+		os.Exit(1)
 	}
 }
 
