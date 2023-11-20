@@ -58,7 +58,12 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 
 				log.Printf("[DEBUG] Deleting %s..", *ruleId)
 				if _, err := rulesClient.Delete(ctx, *ruleId); err != nil {
-					return fmt.Errorf("deleting rule %s from rulestack %s: %+v", ruleId, id, err)
+					// (@jackofallops) Commit process can get stuck in an unmanageable state, results in need to contact PA Support
+					// Switching to non-blocking on failure but reporting error
+					// return fmt.Errorf("deleting rule %s from rulestack %s: %+v", ruleId, id, err)
+					log.Printf("[ERROR] deleting rule %s from rulestack %s: %+v", ruleId, rulestackId, err)
+					log.Printf("[DEBUG] Support ticket required to remove %s", rulestackId)
+					return nil
 				}
 				log.Printf("[DEBUG] Deleting %s..", *ruleId)
 			}
@@ -84,13 +89,18 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 				}
 
 				if !opts.ActuallyDelete {
-					log.Printf("[DEBUG] Would have deleted the Local Rule for %s..", *fqdnId)
+					log.Printf("[DEBUG] Would have deleted the FQDN for %s..", *fqdnId)
 					continue
 				}
 
 				log.Printf("[DEBUG] Deleting %s..", *fqdnId)
 				if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
-					return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
+					// (@jackofallops) Commit process can get stuck in an unmanageable state, results in need to contact PA Support
+					// Switching to non-blocking on failure but reporting error
+					// return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
+					log.Printf("[ERROR] deleting fqdn %s from rulestack %s: %+v", fqdnId, rulestackId, err)
+					log.Printf("[DEBUG] Support ticket required to remove %s", rulestackId)
+					return nil
 				}
 				log.Printf("[DEBUG] Deleted %s..", *fqdnId)
 			}
@@ -117,18 +127,23 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 			}
 		}
 		// Remove certs
-		fqdnInRulestack, err := certClient.ListByLocalRulestacks(ctx, rulestackId)
+		certInRulestack, err := certClient.ListByLocalRulestacks(ctx, rulestackId)
 		if err != nil {
-			if response.WasStatusCode(fqdnInRulestack.HttpResponse, 500) || response.WasStatusCode(fqdnInRulestack.HttpResponse, 502) || response.WasNotFound(fqdnInRulestack.HttpResponse) {
+			if response.WasStatusCode(certInRulestack.HttpResponse, 500) || response.WasStatusCode(certInRulestack.HttpResponse, 502) || response.WasNotFound(certInRulestack.HttpResponse) {
 				continue
 			}
 			return fmt.Errorf("listing FQDNs for %s: %+v", id, err)
 		}
-		if model := fqdnInRulestack.Model; model != nil {
+		if model := certInRulestack.Model; model != nil {
 			for _, v := range *model {
 				if fqdnId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
 					if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
-						return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
+						// (@jackofallops) Commit process can get stuck in an unmanageable state, results in need to contact PA Support
+						// Switching to non-blocking on failure but reporting error
+						// return fmt.Errorf("deleting certificate %s from rulestack %s: %+v", fqdnId, id, err)
+						log.Printf("[ERROR] deleting certificate %s from rulestack %s: %+v", fqdnId, rulestackId, err)
+						log.Printf("[DEBUG] Support ticket required to remove %s", rulestackId)
+						return nil
 					}
 				}
 			}
@@ -150,7 +165,12 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 			for _, v := range *model {
 				if prefixId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
 					if _, err := rulesClient.Delete(ctx, *prefixId); err != nil {
-						return fmt.Errorf("deleting prefix %s from rulestack %s: %+v", prefixId, id, err)
+						// (@jackofallops) Commit process can get stuck in an unmanageable state, results in need to contact PA Support
+						// Switching to non-blocking on failure but reporting error
+						// return fmt.Errorf("deleting prefix %s from rulestack %s: %+v", prefixId, id, err)
+						log.Printf("[ERROR] deleting prefix %s from rulestack %s: %+v", prefixId, rulestackId, err)
+						log.Printf("[DEBUG] Support ticket required to remove %s", rulestackId)
+						return nil
 					}
 				}
 			}
