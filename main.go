@@ -54,10 +54,10 @@ func run(ctx context.Context, credentials clients.Credentials, opts options.Opti
 	if errors := client.ResourceManager(ctx); len(errors) != 0 {
 		errList := make([]string, 0)
 		for _, e := range errors {
-			errList = append(errList, "\n"+e.Error())
+			errList = append(errList, e.Error())
 		}
 
-		return fmt.Errorf("processing Resource Manager: %+v", errList)
+		return fmt.Errorf("processing Resource Manager: %+v", strings.Join(errList, "\n"))
 	}
 
 	log.Printf("[DEBUG] Processing Microsoft Graph..")
