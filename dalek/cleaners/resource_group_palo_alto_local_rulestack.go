@@ -68,6 +68,9 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 				log.Printf("[DEBUG] Deleting %s..", *ruleId)
 			}
 		}
+		if _, err := rulestacksClient.Commit(ctx, localrulestacks.NewLocalRulestackID(rulestackId.SubscriptionId, rulestackId.ResourceGroupName, rulestackId.LocalRulestackName)); err != nil {
+			return fmt.Errorf("failed to commit changes to %s cannot delete, support ticket may be required to remove resource")
+		}
 	}
 
 	// FQDN Lists
@@ -83,9 +86,9 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 		}
 		if model := fqdnInRulestack.Model; model != nil {
 			for _, v := range *model {
-				fqdnId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id))
+				fqdnId, err := fqdnlistlocalrulestack.ParseLocalRulestackFqdnListIDInsensitively(pointer.From(v.Id))
 				if err != nil {
-					return fmt.Errorf("parsing %q as a local rule id: %+v", pointer.From(v.Id), err)
+					return fmt.Errorf("parsing %q as a fqdn list id: %+v", pointer.From(v.Id), err)
 				}
 
 				if !opts.ActuallyDelete {
@@ -94,7 +97,7 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 				}
 
 				log.Printf("[DEBUG] Deleting %s..", *fqdnId)
-				if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
+				if _, err := fqdnClient.Delete(ctx, *fqdnId); err != nil {
 					// (@jackofallops) Commit process can get stuck in an unmanageable state, results in need to contact PA Support
 					// Switching to non-blocking on failure but reporting error
 					// return fmt.Errorf("deleting fqdn %s from rulestack %s: %+v", fqdnId, id, err)
@@ -104,6 +107,9 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 				}
 				log.Printf("[DEBUG] Deleted %s..", *fqdnId)
 			}
+		}
+		if _, err := rulestacksClient.Commit(ctx, localrulestacks.NewLocalRulestackID(rulestackId.SubscriptionId, rulestackId.ResourceGroupName, rulestackId.LocalRulestackName)); err != nil {
+			return fmt.Errorf("failed to commit changes to %s cannot delete, support ticket may be required to remove resource")
 		}
 	}
 
@@ -136,17 +142,20 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 		}
 		if model := certInRulestack.Model; model != nil {
 			for _, v := range *model {
-				if fqdnId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
-					if _, err := rulesClient.Delete(ctx, *fqdnId); err != nil {
+				if certId, err := certificateobjectlocalrulestack.ParseLocalRulestackCertificateID(pointer.From(v.Id)); err != nil && certId != nil {
+					if _, err := certClient.Delete(ctx, *certId); err != nil {
 						// (@jackofallops) Commit process can get stuck in an unmanageable state, results in need to contact PA Support
 						// Switching to non-blocking on failure but reporting error
 						// return fmt.Errorf("deleting certificate %s from rulestack %s: %+v", fqdnId, id, err)
-						log.Printf("[ERROR] deleting certificate %s from rulestack %s: %+v", fqdnId, rulestackId, err)
+						log.Printf("[ERROR] deleting certificate %s from rulestack %s: %+v", certId, rulestackId, err)
 						log.Printf("[DEBUG] Support ticket required to remove %s", rulestackId)
 						return nil
 					}
 				}
 			}
+		}
+		if _, err := rulestacksClient.Commit(ctx, localrulestacks.NewLocalRulestackID(rulestackId.SubscriptionId, rulestackId.ResourceGroupName, rulestackId.LocalRulestackName)); err != nil {
+			return fmt.Errorf("failed to commit changes to %s cannot delete, support ticket may be required to remove resource")
 		}
 	}
 
@@ -163,8 +172,8 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 		}
 		if model := prefixInRulestack.Model; model != nil {
 			for _, v := range *model {
-				if prefixId, err := localrules.ParseLocalRuleIDInsensitively(pointer.From(v.Id)); err != nil {
-					if _, err := rulesClient.Delete(ctx, *prefixId); err != nil {
+				if prefixId, err := prefixlistlocalrulestack.ParseLocalRulestackPrefixListIDInsensitively(pointer.From(v.Id)); err != nil && prefixId != nil {
+					if _, err := prefixClient.Delete(ctx, *prefixId); err != nil {
 						// (@jackofallops) Commit process can get stuck in an unmanageable state, results in need to contact PA Support
 						// Switching to non-blocking on failure but reporting error
 						// return fmt.Errorf("deleting prefix %s from rulestack %s: %+v", prefixId, id, err)
@@ -174,6 +183,9 @@ func (paloAltoLocalRulestackCleaner) Cleanup(ctx context.Context, id commonids.R
 					}
 				}
 			}
+		}
+		if _, err := rulestacksClient.Commit(ctx, localrulestacks.NewLocalRulestackID(rulestackId.SubscriptionId, rulestackId.ResourceGroupName, rulestackId.LocalRulestackName)); err != nil {
+			return fmt.Errorf("failed to commit changes to %s cannot delete, support ticket may be required to remove resource", rulestackId)
 		}
 	}
 
