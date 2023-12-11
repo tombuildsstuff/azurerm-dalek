@@ -3,6 +3,7 @@ package cleaners
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"log"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
@@ -36,6 +37,22 @@ func (removeDataProtectionFromResourceGroupCleaner) Cleanup(ctx context.Context,
 		if err != nil {
 			return fmt.Errorf("listing Backup Instances within %s: %+v", backupInstancesVaultId, err)
 		}
+		// disable soft-delete first, this will block the deletion of the vault if instances are soft-deleted
+		patch := backupvaults.PatchResourceRequestInput{
+			Properties: &backupvaults.PatchBackupVaultInput{
+				SecuritySettings: &backupvaults.SecuritySettings{
+					SoftDeleteSettings: &backupvaults.SoftDeleteSettings{
+						State: pointer.To(backupvaults.SoftDeleteStateOff),
+					},
+				},
+			},
+		}
+
+		if err := client.ResourceManager.DataProtection.BackupVaults.UpdateThenPoll(ctx, vaultId, patch); err != nil {
+			log.Printf("Failed to turn off Soft Delete for %s: %+v", vaultId, err)
+			continue
+		}
+
 		for _, instance := range instances.Items {
 			instanceId := backupinstances.NewBackupInstanceID(backupInstancesVaultId.SubscriptionId, backupInstancesVaultId.ResourceGroupName, backupInstancesVaultId.BackupVaultName, *instance.Name)
 			if !opts.ActuallyDelete {
