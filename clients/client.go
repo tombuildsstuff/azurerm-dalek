@@ -13,6 +13,10 @@ import (
 	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2022-05-01/netappaccounts"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2022-05-01/volumes"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/netapp/2022-05-01/volumesreplication"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-05-01/expressroutecircuitauthorizations"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-05-01/expressroutecircuitconnections"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-05-01/expressroutecircuitpeerings"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/network/2023-05-01/expressroutecircuits"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/notificationhubs/2017-04-01/namespaces"
 	paloAltoNetworks "github.com/hashicorp/go-azure-sdk/resource-manager/paloaltonetworks/2022-08-29"
 	resourceGraph "github.com/hashicorp/go-azure-sdk/resource-manager/resourcegraph/2022-10-01/resources"
@@ -42,23 +46,27 @@ type MicrosoftGraphClient struct {
 }
 
 type ResourceManagerClient struct {
-	DataProtection                  *dataProtection.Client
-	LocksClient                     *managementlocks.ManagementLocksClient
-	MachineLearningWorkspacesClient *workspaces.WorkspacesClient
-	ManagedHSMsClient               *managedhsms.ManagedHsmsClient
-	ManagementClient                *managementgroups.ManagementGroupsClient
-	NetAppAccountClient             *netappaccounts.NetAppAccountsClient
-	NetAppCapacityPoolClient        *capacitypools.CapacityPoolsClient
-	NetAppVolumeClient              *volumes.VolumesClient
-	NetAppVolumeReplicationClient   *volumesreplication.VolumesReplicationClient
-	NotificationHubNamespaceClient  *namespaces.NamespacesClient
-	PaloAlto                        *paloAltoNetworks.Client
-	ResourceGraphClient             *resourceGraph.ResourcesClient
-	ResourcesGroupsClient           *resourcegroups.ResourceGroupsClient
-	ServiceBus                      *serviceBus.Client
-	StorageSyncClient               *storagesyncservicesresource.StorageSyncServicesResourceClient
-	StorageSyncGroupClient          *syncgroupresource.SyncGroupResourceClient
-	StorageSyncCloudEndpointClient  *cloudendpointresource.CloudEndpointResourceClient
+	DataProtection                          *dataProtection.Client
+	ExpressRouteCircuitsClient              *expressroutecircuits.ExpressRouteCircuitsClient
+	ExpressRouteCircuitAuthorizationsClient *expressroutecircuitauthorizations.ExpressRouteCircuitAuthorizationsClient
+	ExpressRouteCircuitConnectionsClient    *expressroutecircuitconnections.ExpressRouteCircuitConnectionsClient
+	ExpressRouteCircuitPeeringsClient       *expressroutecircuitpeerings.ExpressRouteCircuitPeeringsClient
+	LocksClient                             *managementlocks.ManagementLocksClient
+	MachineLearningWorkspacesClient         *workspaces.WorkspacesClient
+	ManagedHSMsClient                       *managedhsms.ManagedHsmsClient
+	ManagementClient                        *managementgroups.ManagementGroupsClient
+	NetAppAccountClient                     *netappaccounts.NetAppAccountsClient
+	NetAppCapacityPoolClient                *capacitypools.CapacityPoolsClient
+	NetAppVolumeClient                      *volumes.VolumesClient
+	NetAppVolumeReplicationClient           *volumesreplication.VolumesReplicationClient
+	NotificationHubNamespaceClient          *namespaces.NamespacesClient
+	PaloAlto                                *paloAltoNetworks.Client
+	ResourceGraphClient                     *resourceGraph.ResourcesClient
+	ResourcesGroupsClient                   *resourcegroups.ResourceGroupsClient
+	ServiceBus                              *serviceBus.Client
+	StorageSyncClient                       *storagesyncservicesresource.StorageSyncServicesResourceClient
+	StorageSyncGroupClient                  *syncgroupresource.SyncGroupResourceClient
+	StorageSyncCloudEndpointClient          *cloudendpointresource.CloudEndpointResourceClient
 }
 
 type Credentials struct {
@@ -170,6 +178,30 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 		return nil, fmt.Errorf("building Data Protection Client: %+v", err)
 	}
 
+	expressRouteCircuitsClient, err := expressroutecircuits.NewExpressRouteCircuitsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Express Route Circuits client: %+v", err)
+	}
+	expressRouteCircuitsClient.Client.Authorizer = resourceManagerAuthorizer
+
+	expressRouteCircuitAuthorizationsClient, err := expressroutecircuitauthorizations.NewExpressRouteCircuitAuthorizationsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Express Route Circuit Authorizations client: %+v", err)
+	}
+	expressRouteCircuitAuthorizationsClient.Client.Authorizer = resourceManagerAuthorizer
+
+	expressRouteCircuitConnectionsClient, err := expressroutecircuitconnections.NewExpressRouteCircuitConnectionsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Express Route Circuit Connections client: %+v", err)
+	}
+	expressRouteCircuitConnectionsClient.Client.Authorizer = resourceManagerAuthorizer
+
+	expressRouteCircuitPeeringsClient, err := expressroutecircuitpeerings.NewExpressRouteCircuitPeeringsClientWithBaseURI(environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Express Route Circuit Peerings client: %+v", err)
+	}
+	expressRouteCircuitPeeringsClient.Client.Authorizer = resourceManagerAuthorizer
+
 	locksClient, err := managementlocks.NewManagementLocksClientWithBaseURI(environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building ManagementLocks client: %+v", err)
@@ -269,22 +301,26 @@ func buildResourceManagerClient(ctx context.Context, creds auth.Credentials, env
 	storageSyncCloudEndpointClient.Client.Authorizer = resourceManagerAuthorizer
 
 	return &ResourceManagerClient{
-		DataProtection:                  dataProtectionClient,
-		LocksClient:                     locksClient,
-		MachineLearningWorkspacesClient: workspacesClient,
-		ManagedHSMsClient:               managedHsmsClient,
-		ManagementClient:                managementClient,
-		NetAppAccountClient:             netAppAccountClient,
-		NetAppCapacityPoolClient:        netAppCapacityPoolClient,
-		NetAppVolumeClient:              netAppVolumeClient,
-		NetAppVolumeReplicationClient:   netAppVolumeReplicationClient,
-		NotificationHubNamespaceClient:  notificationHubNamespacesClient,
-		PaloAlto:                        paloAltoClient,
-		ResourceGraphClient:             resourceGraphClient,
-		ResourcesGroupsClient:           resourcesClient,
-		ServiceBus:                      serviceBusClient,
-		StorageSyncClient:               storageSyncClient,
-		StorageSyncGroupClient:          storageSyncGroupClient,
-		StorageSyncCloudEndpointClient:  storageSyncCloudEndpointClient,
+		DataProtection:                          dataProtectionClient,
+		ExpressRouteCircuitsClient:              expressRouteCircuitsClient,
+		ExpressRouteCircuitAuthorizationsClient: expressRouteCircuitAuthorizationsClient,
+		ExpressRouteCircuitConnectionsClient:    expressRouteCircuitConnectionsClient,
+		ExpressRouteCircuitPeeringsClient:       expressRouteCircuitPeeringsClient,
+		LocksClient:                             locksClient,
+		MachineLearningWorkspacesClient:         workspacesClient,
+		ManagedHSMsClient:                       managedHsmsClient,
+		ManagementClient:                        managementClient,
+		NetAppAccountClient:                     netAppAccountClient,
+		NetAppCapacityPoolClient:                netAppCapacityPoolClient,
+		NetAppVolumeClient:                      netAppVolumeClient,
+		NetAppVolumeReplicationClient:           netAppVolumeReplicationClient,
+		NotificationHubNamespaceClient:          notificationHubNamespacesClient,
+		PaloAlto:                                paloAltoClient,
+		ResourceGraphClient:                     resourceGraphClient,
+		ResourcesGroupsClient:                   resourcesClient,
+		ServiceBus:                              serviceBusClient,
+		StorageSyncClient:                       storageSyncClient,
+		StorageSyncGroupClient:                  storageSyncGroupClient,
+		StorageSyncCloudEndpointClient:          storageSyncCloudEndpointClient,
 	}, nil
 }
