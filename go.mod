@@ -2,8 +2,6 @@ module github.com/tombuildsstuff/azurerm-dalek
 
 go 1.21
 
-toolchain go1.21.3
-
 require (
 	github.com/hashicorp/go-azure-helpers v0.66.1
 	github.com/hashicorp/go-azure-sdk/resource-manager v0.20240125.1172517
