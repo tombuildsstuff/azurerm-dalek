@@ -10,7 +10,7 @@ import (
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See NOTICE.txt in the project root for license information.
 
-var _ resourceids.ResourceId = SubscriptionId{}
+var _ resourceids.ResourceId = &SubscriptionId{}
 
 // SubscriptionId is a struct representing the Resource ID for a Subscription
 type SubscriptionId struct {
@@ -28,21 +28,15 @@ func NewSubscriptionID(groupId string, subscriptionId string) SubscriptionId {
 
 // ParseSubscriptionID parses 'input' into a SubscriptionId
 func ParseSubscriptionID(input string) (*SubscriptionId, error) {
-	parser := resourceids.NewParserFromResourceIdType(SubscriptionId{})
+	parser := resourceids.NewParserFromResourceIdType(&SubscriptionId{})
 	parsed, err := parser.Parse(input, false)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := SubscriptionId{}
-
-	if id.GroupId, ok = parsed.Parsed["groupId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "groupId", *parsed)
-	}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
@@ -51,24 +45,32 @@ func ParseSubscriptionID(input string) (*SubscriptionId, error) {
 // ParseSubscriptionIDInsensitively parses 'input' case-insensitively into a SubscriptionId
 // note: this method should only be used for API response data and not user input
 func ParseSubscriptionIDInsensitively(input string) (*SubscriptionId, error) {
-	parser := resourceids.NewParserFromResourceIdType(SubscriptionId{})
+	parser := resourceids.NewParserFromResourceIdType(&SubscriptionId{})
 	parsed, err := parser.Parse(input, true)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := SubscriptionId{}
-
-	if id.GroupId, ok = parsed.Parsed["groupId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "groupId", *parsed)
-	}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
+}
+
+func (id *SubscriptionId) FromParseResult(input resourceids.ParseResult) error {
+	var ok bool
+
+	if id.GroupId, ok = input.Parsed["groupId"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "groupId", input)
+	}
+
+	if id.SubscriptionId, ok = input.Parsed["subscriptionId"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", input)
+	}
+
+	return nil
 }
 
 // ValidateSubscriptionID checks that 'input' can be parsed as a Subscription ID

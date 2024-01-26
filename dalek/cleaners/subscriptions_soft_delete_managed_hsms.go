@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-02-01/managedhsms"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/keyvault/2023-07-01/managedhsms"
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
 	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
