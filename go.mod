@@ -6,9 +6,10 @@ toolchain go1.21.3
 
 require (
 	github.com/hashicorp/go-azure-helpers v0.66.1
-	github.com/hashicorp/go-azure-sdk v0.20230829.1225856
+	github.com/hashicorp/go-azure-sdk/resource-manager v0.20240125.1172517
+	github.com/hashicorp/go-azure-sdk/sdk v0.20240125.1172517
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/manicminer/hamilton v0.63.0
+	github.com/manicminer/hamilton v0.66.0
 )
 
 require (
@@ -18,8 +19,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-azure-sdk/resource-manager v0.20240125.1115017 // indirect
-	github.com/hashicorp/go-azure-sdk/sdk v0.20240125.1115017 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320 // indirect
 	github.com/hashicorp/go-hclog v1.4.0 // indirect
@@ -32,7 +31,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.8.0 // indirect
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.26.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect

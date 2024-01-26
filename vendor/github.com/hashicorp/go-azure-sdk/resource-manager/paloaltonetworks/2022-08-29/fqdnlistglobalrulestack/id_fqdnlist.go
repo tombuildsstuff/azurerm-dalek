@@ -10,7 +10,7 @@ import (
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See NOTICE.txt in the project root for license information.
 
-var _ resourceids.ResourceId = FqdnListId{}
+var _ resourceids.ResourceId = &FqdnListId{}
 
 // FqdnListId is a struct representing the Resource ID for a Fqdn List
 type FqdnListId struct {
@@ -28,21 +28,15 @@ func NewFqdnListID(globalRulestackName string, fqdnListName string) FqdnListId {
 
 // ParseFqdnListID parses 'input' into a FqdnListId
 func ParseFqdnListID(input string) (*FqdnListId, error) {
-	parser := resourceids.NewParserFromResourceIdType(FqdnListId{})
+	parser := resourceids.NewParserFromResourceIdType(&FqdnListId{})
 	parsed, err := parser.Parse(input, false)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := FqdnListId{}
-
-	if id.GlobalRulestackName, ok = parsed.Parsed["globalRulestackName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "globalRulestackName", *parsed)
-	}
-
-	if id.FqdnListName, ok = parsed.Parsed["fqdnListName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "fqdnListName", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
@@ -51,24 +45,32 @@ func ParseFqdnListID(input string) (*FqdnListId, error) {
 // ParseFqdnListIDInsensitively parses 'input' case-insensitively into a FqdnListId
 // note: this method should only be used for API response data and not user input
 func ParseFqdnListIDInsensitively(input string) (*FqdnListId, error) {
-	parser := resourceids.NewParserFromResourceIdType(FqdnListId{})
+	parser := resourceids.NewParserFromResourceIdType(&FqdnListId{})
 	parsed, err := parser.Parse(input, true)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := FqdnListId{}
-
-	if id.GlobalRulestackName, ok = parsed.Parsed["globalRulestackName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "globalRulestackName", *parsed)
-	}
-
-	if id.FqdnListName, ok = parsed.Parsed["fqdnListName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "fqdnListName", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
+}
+
+func (id *FqdnListId) FromParseResult(input resourceids.ParseResult) error {
+	var ok bool
+
+	if id.GlobalRulestackName, ok = input.Parsed["globalRulestackName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "globalRulestackName", input)
+	}
+
+	if id.FqdnListName, ok = input.Parsed["fqdnListName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "fqdnListName", input)
+	}
+
+	return nil
 }
 
 // ValidateFqdnListID checks that 'input' can be parsed as a Fqdn List ID

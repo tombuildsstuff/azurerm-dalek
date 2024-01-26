@@ -10,7 +10,7 @@ import (
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See NOTICE.txt in the project root for license information.
 
-var _ resourceids.ResourceId = UpdateProtectedItemRequestId{}
+var _ resourceids.ResourceId = &UpdateProtectedItemRequestId{}
 
 // UpdateProtectedItemRequestId is a struct representing the Resource ID for a Update Protected Item Request
 type UpdateProtectedItemRequestId struct {
@@ -32,29 +32,15 @@ func NewUpdateProtectedItemRequestID(subscriptionId string, resourceGroupName st
 
 // ParseUpdateProtectedItemRequestID parses 'input' into a UpdateProtectedItemRequestId
 func ParseUpdateProtectedItemRequestID(input string) (*UpdateProtectedItemRequestId, error) {
-	parser := resourceids.NewParserFromResourceIdType(UpdateProtectedItemRequestId{})
+	parser := resourceids.NewParserFromResourceIdType(&UpdateProtectedItemRequestId{})
 	parsed, err := parser.Parse(input, false)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := UpdateProtectedItemRequestId{}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
-	}
-
-	if id.ResourceGroupName, ok = parsed.Parsed["resourceGroupName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", *parsed)
-	}
-
-	if id.ResourceGuardName, ok = parsed.Parsed["resourceGuardName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGuardName", *parsed)
-	}
-
-	if id.UpdateProtectedItemRequestName, ok = parsed.Parsed["updateProtectedItemRequestName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "updateProtectedItemRequestName", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
@@ -63,32 +49,40 @@ func ParseUpdateProtectedItemRequestID(input string) (*UpdateProtectedItemReques
 // ParseUpdateProtectedItemRequestIDInsensitively parses 'input' case-insensitively into a UpdateProtectedItemRequestId
 // note: this method should only be used for API response data and not user input
 func ParseUpdateProtectedItemRequestIDInsensitively(input string) (*UpdateProtectedItemRequestId, error) {
-	parser := resourceids.NewParserFromResourceIdType(UpdateProtectedItemRequestId{})
+	parser := resourceids.NewParserFromResourceIdType(&UpdateProtectedItemRequestId{})
 	parsed, err := parser.Parse(input, true)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := UpdateProtectedItemRequestId{}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
-	}
-
-	if id.ResourceGroupName, ok = parsed.Parsed["resourceGroupName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", *parsed)
-	}
-
-	if id.ResourceGuardName, ok = parsed.Parsed["resourceGuardName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGuardName", *parsed)
-	}
-
-	if id.UpdateProtectedItemRequestName, ok = parsed.Parsed["updateProtectedItemRequestName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "updateProtectedItemRequestName", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
+}
+
+func (id *UpdateProtectedItemRequestId) FromParseResult(input resourceids.ParseResult) error {
+	var ok bool
+
+	if id.SubscriptionId, ok = input.Parsed["subscriptionId"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", input)
+	}
+
+	if id.ResourceGroupName, ok = input.Parsed["resourceGroupName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", input)
+	}
+
+	if id.ResourceGuardName, ok = input.Parsed["resourceGuardName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "resourceGuardName", input)
+	}
+
+	if id.UpdateProtectedItemRequestName, ok = input.Parsed["updateProtectedItemRequestName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "updateProtectedItemRequestName", input)
+	}
+
+	return nil
 }
 
 // ValidateUpdateProtectedItemRequestID checks that 'input' can be parsed as a Update Protected Item Request ID

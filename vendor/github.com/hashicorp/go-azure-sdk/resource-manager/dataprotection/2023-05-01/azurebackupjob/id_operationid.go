@@ -10,7 +10,7 @@ import (
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See NOTICE.txt in the project root for license information.
 
-var _ resourceids.ResourceId = OperationIdId{}
+var _ resourceids.ResourceId = &OperationIdId{}
 
 // OperationIdId is a struct representing the Resource ID for a Operation Id
 type OperationIdId struct {
@@ -32,29 +32,15 @@ func NewOperationIdID(subscriptionId string, resourceGroupName string, backupVau
 
 // ParseOperationIdID parses 'input' into a OperationIdId
 func ParseOperationIdID(input string) (*OperationIdId, error) {
-	parser := resourceids.NewParserFromResourceIdType(OperationIdId{})
+	parser := resourceids.NewParserFromResourceIdType(&OperationIdId{})
 	parsed, err := parser.Parse(input, false)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := OperationIdId{}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
-	}
-
-	if id.ResourceGroupName, ok = parsed.Parsed["resourceGroupName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", *parsed)
-	}
-
-	if id.BackupVaultName, ok = parsed.Parsed["backupVaultName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "backupVaultName", *parsed)
-	}
-
-	if id.OperationId, ok = parsed.Parsed["operationId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "operationId", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
@@ -63,32 +49,40 @@ func ParseOperationIdID(input string) (*OperationIdId, error) {
 // ParseOperationIdIDInsensitively parses 'input' case-insensitively into a OperationIdId
 // note: this method should only be used for API response data and not user input
 func ParseOperationIdIDInsensitively(input string) (*OperationIdId, error) {
-	parser := resourceids.NewParserFromResourceIdType(OperationIdId{})
+	parser := resourceids.NewParserFromResourceIdType(&OperationIdId{})
 	parsed, err := parser.Parse(input, true)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := OperationIdId{}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
-	}
-
-	if id.ResourceGroupName, ok = parsed.Parsed["resourceGroupName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", *parsed)
-	}
-
-	if id.BackupVaultName, ok = parsed.Parsed["backupVaultName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "backupVaultName", *parsed)
-	}
-
-	if id.OperationId, ok = parsed.Parsed["operationId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "operationId", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
+}
+
+func (id *OperationIdId) FromParseResult(input resourceids.ParseResult) error {
+	var ok bool
+
+	if id.SubscriptionId, ok = input.Parsed["subscriptionId"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", input)
+	}
+
+	if id.ResourceGroupName, ok = input.Parsed["resourceGroupName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", input)
+	}
+
+	if id.BackupVaultName, ok = input.Parsed["backupVaultName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "backupVaultName", input)
+	}
+
+	if id.OperationId, ok = input.Parsed["operationId"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "operationId", input)
+	}
+
+	return nil
 }
 
 // ValidateOperationIdID checks that 'input' can be parsed as a Operation Id ID

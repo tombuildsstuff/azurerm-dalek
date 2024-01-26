@@ -10,7 +10,7 @@ import (
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See NOTICE.txt in the project root for license information.
 
-var _ resourceids.ResourceId = RecoveryPointId{}
+var _ resourceids.ResourceId = &RecoveryPointId{}
 
 // RecoveryPointId is a struct representing the Resource ID for a Recovery Point
 type RecoveryPointId struct {
@@ -34,33 +34,15 @@ func NewRecoveryPointID(subscriptionId string, resourceGroupName string, backupV
 
 // ParseRecoveryPointID parses 'input' into a RecoveryPointId
 func ParseRecoveryPointID(input string) (*RecoveryPointId, error) {
-	parser := resourceids.NewParserFromResourceIdType(RecoveryPointId{})
+	parser := resourceids.NewParserFromResourceIdType(&RecoveryPointId{})
 	parsed, err := parser.Parse(input, false)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := RecoveryPointId{}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
-	}
-
-	if id.ResourceGroupName, ok = parsed.Parsed["resourceGroupName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", *parsed)
-	}
-
-	if id.BackupVaultName, ok = parsed.Parsed["backupVaultName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "backupVaultName", *parsed)
-	}
-
-	if id.BackupInstanceName, ok = parsed.Parsed["backupInstanceName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "backupInstanceName", *parsed)
-	}
-
-	if id.RecoveryPointId, ok = parsed.Parsed["recoveryPointId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "recoveryPointId", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
@@ -69,36 +51,44 @@ func ParseRecoveryPointID(input string) (*RecoveryPointId, error) {
 // ParseRecoveryPointIDInsensitively parses 'input' case-insensitively into a RecoveryPointId
 // note: this method should only be used for API response data and not user input
 func ParseRecoveryPointIDInsensitively(input string) (*RecoveryPointId, error) {
-	parser := resourceids.NewParserFromResourceIdType(RecoveryPointId{})
+	parser := resourceids.NewParserFromResourceIdType(&RecoveryPointId{})
 	parsed, err := parser.Parse(input, true)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %q: %+v", input, err)
 	}
 
-	var ok bool
 	id := RecoveryPointId{}
-
-	if id.SubscriptionId, ok = parsed.Parsed["subscriptionId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", *parsed)
-	}
-
-	if id.ResourceGroupName, ok = parsed.Parsed["resourceGroupName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", *parsed)
-	}
-
-	if id.BackupVaultName, ok = parsed.Parsed["backupVaultName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "backupVaultName", *parsed)
-	}
-
-	if id.BackupInstanceName, ok = parsed.Parsed["backupInstanceName"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "backupInstanceName", *parsed)
-	}
-
-	if id.RecoveryPointId, ok = parsed.Parsed["recoveryPointId"]; !ok {
-		return nil, resourceids.NewSegmentNotSpecifiedError(id, "recoveryPointId", *parsed)
+	if err := id.FromParseResult(*parsed); err != nil {
+		return nil, err
 	}
 
 	return &id, nil
+}
+
+func (id *RecoveryPointId) FromParseResult(input resourceids.ParseResult) error {
+	var ok bool
+
+	if id.SubscriptionId, ok = input.Parsed["subscriptionId"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "subscriptionId", input)
+	}
+
+	if id.ResourceGroupName, ok = input.Parsed["resourceGroupName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "resourceGroupName", input)
+	}
+
+	if id.BackupVaultName, ok = input.Parsed["backupVaultName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "backupVaultName", input)
+	}
+
+	if id.BackupInstanceName, ok = input.Parsed["backupInstanceName"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "backupInstanceName", input)
+	}
+
+	if id.RecoveryPointId, ok = input.Parsed["recoveryPointId"]; !ok {
+		return resourceids.NewSegmentNotSpecifiedError(id, "recoveryPointId", input)
+	}
+
+	return nil
 }
 
 // ValidateRecoveryPointID checks that 'input' can be parsed as a Recovery Point ID
