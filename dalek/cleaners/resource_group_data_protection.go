@@ -3,13 +3,14 @@ package cleaners
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"log"
 
+	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/dataprotection/2023-05-01/backupinstances"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/dataprotection/2023-05-01/backuppolicies"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/dataprotection/2023-05-01/backupvaults"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/dataprotection/2023-05-01/deletedbackupinstances"
 	"github.com/tombuildsstuff/azurerm-dalek/clients"
 	"github.com/tombuildsstuff/azurerm-dalek/dalek/options"
 )
@@ -31,12 +32,6 @@ func (removeDataProtectionFromResourceGroupCleaner) Cleanup(ctx context.Context,
 	for _, vault := range backupVaults.Items {
 		vaultId := backupvaults.NewBackupVaultID(id.SubscriptionId, id.ResourceGroupName, *vault.Name)
 
-		// list the Backup Instances within it, those need to be removed first
-		backupInstancesVaultId := backupinstances.NewBackupVaultID(vaultId.SubscriptionId, vaultId.ResourceGroupName, vaultId.BackupVaultName)
-		instances, err := client.ResourceManager.DataProtection.BackupInstances.ListComplete(ctx, backupInstancesVaultId)
-		if err != nil {
-			return fmt.Errorf("listing Backup Instances within %s: %+v", backupInstancesVaultId, err)
-		}
 		// disable soft-delete first, this will block the deletion of the vault if instances are soft-deleted
 		patch := backupvaults.PatchResourceRequestInput{
 			Properties: &backupvaults.PatchBackupVaultInput{
@@ -47,10 +42,36 @@ func (removeDataProtectionFromResourceGroupCleaner) Cleanup(ctx context.Context,
 				},
 			},
 		}
-
 		if err := client.ResourceManager.DataProtection.BackupVaults.UpdateThenPoll(ctx, vaultId, patch); err != nil {
 			log.Printf("Failed to turn off Soft Delete for %s: %+v", vaultId, err)
 			continue
+		}
+
+		// We have to undelete items that were deleted when softdelete was enabled and then delete them again
+		deletedBackupInstanceVaultId := deletedbackupinstances.NewBackupVaultID(vaultId.SubscriptionId, vaultId.ResourceGroupName, vaultId.BackupVaultName)
+		deletedInstances, err := client.ResourceManager.DataProtection.DeletedBackupInstances.ListComplete(ctx, deletedBackupInstanceVaultId)
+		for _, deletedInstance := range deletedInstances.Items {
+			deletedInstanceId := deletedbackupinstances.NewDeletedBackupInstanceID(deletedBackupInstanceVaultId.SubscriptionId, deletedBackupInstanceVaultId.ResourceGroupName, deletedBackupInstanceVaultId.BackupVaultName, *deletedInstance.Name)
+
+			if !opts.ActuallyDelete {
+				log.Printf("[DEBUG] Would have deleted %s..", deletedInstanceId)
+				continue
+			}
+
+			log.Printf("[DEBUG] Deleting %s..", deletedInstanceId)
+			if err := client.ResourceManager.DataProtection.DeletedBackupInstances.UndeleteThenPoll(ctx, deletedInstanceId); err != nil {
+				log.Printf("[ERROR] deleting %s: %+v", deletedInstanceId, err)
+				// todo readd this when https://github.com/hashicorp/go-azure-sdk/issues/886 is resolved
+				// return fmt.Errorf("deleting %s: %+v", deletedInstanceId, err)
+			}
+			log.Printf("[DEBUG] Deleted %s.", deletedInstanceId)
+		}
+
+		// list the Backup Instances within it, those need to be removed first
+		backupInstancesVaultId := backupinstances.NewBackupVaultID(vaultId.SubscriptionId, vaultId.ResourceGroupName, vaultId.BackupVaultName)
+		instances, err := client.ResourceManager.DataProtection.BackupInstances.ListComplete(ctx, backupInstancesVaultId)
+		if err != nil {
+			return fmt.Errorf("listing Backup Instances within %s: %+v", backupInstancesVaultId, err)
 		}
 
 		for _, instance := range instances.Items {
