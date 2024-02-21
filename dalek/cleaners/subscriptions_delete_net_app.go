@@ -115,7 +115,8 @@ func (p deleteNetAppSubscriptionCleaner) Cleanup(ctx context.Context, subscripti
 				time.Sleep(30 * time.Second)
 
 				forceDelete := true
-				if err = netAppVolumeClient.DeleteThenPoll(ctx, *volumeId, volumes.DeleteOperationOptions{ForceDelete: &forceDelete}); err != nil {
+				// the netapp api doesn't error if the delete fails so we'll just fire and forget as to not break the dalek
+				if _, err = netAppVolumeClient.Delete(ctx, *volumeId, volumes.DeleteOperationOptions{ForceDelete: &forceDelete}); err != nil {
 					// Potential Eventual Consistency Issues so we'll just log and move on
 					log.Printf("[DEBUG] Unable to delete %s: %+v", volumeId, err)
 				}
@@ -126,7 +127,8 @@ func (p deleteNetAppSubscriptionCleaner) Cleanup(ctx context.Context, subscripti
 				return err
 			}
 
-			if err = netAppCapcityPoolClient.PoolsDeleteThenPoll(ctx, *capacityPoolId); err != nil {
+			// the netapp api doesn't error if the delete fails so we'll just fire and forget as to not break the dalek
+			if _, err = netAppCapcityPoolClient.PoolsDelete(ctx, *capacityPoolId); err != nil {
 				// Potential Eventual Consistency Issues so we'll just log and move on
 				log.Printf("[DEBUG] Unable to delete %s: %+v", capacityPoolId, err)
 			}
@@ -140,7 +142,8 @@ func (p deleteNetAppSubscriptionCleaner) Cleanup(ctx context.Context, subscripti
 			return err
 		}
 
-		if err = netAppAccountClient.AccountsDeleteThenPoll(ctx, *accountId); err != nil {
+		// the netapp api doesn't error if the delete fails so we'll just fire and forget as to not break the dalek
+		if _, err = netAppAccountClient.AccountsDelete(ctx, *accountId); err != nil {
 			// Potential Eventual Consistency Issues so we'll just log and move on
 			log.Printf("[DEBUG] Unable to delete %s: %+v", accountId, err)
 		}
